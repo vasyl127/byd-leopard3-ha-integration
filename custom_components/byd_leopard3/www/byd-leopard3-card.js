@@ -223,8 +223,13 @@ class BydLeopard3Card extends HTMLElement {
 
   setConfig(config){
     this._cfg = {...DEFAULTS, ...(config || {})};
-    this._period = 1;
-    if (this.shadowRoot) this._applyLayout(), this._render(true);
+    this._period ||= 1;
+    // The visual editor calls setConfig on every change: repaint, relayout, refetch trips.
+    if (this.shadowRoot && this._hass){
+      this._applyLayout();
+      this._loadImages().then(() => this._render(true));
+      this._refreshTrips();
+    }
   }
   getCardSize(){ return this._cfg?.layout === 'trips' ? 9 : 12; }
   getGridOptions(){ return {columns: 12, min_columns: 6, rows: 'auto'}; }
@@ -738,7 +743,7 @@ class BydLeopard3CardEditor extends HTMLElement {
       {name: 'low_soc', selector: {number: {min: 5, max: 50, step: 1, mode: 'box', unit_of_measurement: '%'}}},
       {name: 'tyre_min', selector: {number: {min: 1.5, max: 3.5, step: 0.05, mode: 'box', unit_of_measurement: 'bar'}}},
       {name: 'charge_target', selector: {number: {min: 50, max: 100, step: 5, mode: 'box', unit_of_measurement: '%'}}},
-      {type: 'expandable', name: '', title: this.t('ed_advanced'), schema: [
+      {type: 'expandable', name: 'advanced', flatten: true, title: this.t('ed_advanced'), schema: [
         {name: 'title', selector: {text: {}}},
         {name: 'image_side', selector: {text: {}}},
         {name: 'image_top', selector: {text: {}}},
