@@ -3,9 +3,13 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.0.0';
+const VERSION = '1.1.1';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
+// Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
+// Cloudflare never serve a drawing or the map library from a previous release.
+const ASSET_V = new URL(import.meta.url).searchParams.get('v') || VERSION;
+const asset = (path) => `${BASE}${path}?v=${encodeURIComponent(ASSET_V)}`;
 
 /* ---------- Paint ---------- */
 const COLORS = {
@@ -39,12 +43,12 @@ const _loadImg = (src) => new Promise((ok, bad) => { const i = new Image(); i.cr
 // Recolour the body of the black drawing: masked pixels take the target colour, shaded by the
 // original brightness; chrome and highlights blend toward white; saturated pixels (lights) stay.
 async function paint(view, hex){
-  const src = `${BASE}images/leopard3_${view}.png`;
+  const src = asset(`images/leopard3_${view}.png`);
   if (!hex) return src;
   const key = view + hex;
   if (_painted.has(key)) return _painted.get(key);
   const job = (async () => {
-    const [img, mask] = await Promise.all([_loadImg(src), _loadImg(`${BASE}images/leopard3_${view}_mask.png`)]);
+    const [img, mask] = await Promise.all([_loadImg(src), _loadImg(asset(`images/leopard3_${view}_mask.png`))]);
     const w = img.naturalWidth, h = img.naturalHeight;
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const g = c.getContext('2d', {willReadFrequently: true});
@@ -77,13 +81,13 @@ function loadLeaflet(){
   if (_leaflet) return _leaflet;
   _leaflet = new Promise((ok, bad) => {
     const s = document.createElement('script');
-    s.src = `${BASE}leaflet/leaflet.js`; s.onload = () => ok(window.L); s.onerror = bad;
+    s.src = asset('leaflet/leaflet.js'); s.onload = () => ok(window.L); s.onerror = bad;
     document.head.appendChild(s);
   });
   return _leaflet;
 }
 let _leafletCss;
-const leafletCss = () => _leafletCss ||= fetch(`${BASE}leaflet/leaflet.css`).then(r => r.text()).catch(() => '');
+const leafletCss = () => _leafletCss ||= fetch(asset('leaflet/leaflet.css')).then(r => r.text()).catch(() => '');
 
 /* ---------- Strings ---------- */
 const STR = (() => { const s = {
