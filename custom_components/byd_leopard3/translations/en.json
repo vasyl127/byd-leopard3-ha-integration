@@ -16,7 +16,7 @@
       },
       "webhook": {
         "title": "Webhook URL",
-        "description": "Paste this URL into your app (in BYDMate: Settings → Home Assistant → Webhook URL). The car appears as soon as the first packet arrives.\n\n`{webhook_url}`"
+        "description": "Paste this URL into your app (in BYDMate: Settings → Integrations → Webhook: telemetry, then turn on Live data → your own server). The car appears as soon as the first packet arrives.\n\n`{webhook_url}`"
       }
     },
     "error": {
@@ -34,11 +34,11 @@
           "capacity": "Battery capacity override",
           "offline_after": "Offline after",
           "record_trips": "Record trips",
-          "webhook_secret": "HMAC secret (optional)",
+          "webhook_secret": "Webhook secret (optional)",
           "field_map": "Field map (JSON)"
         },
         "data_description": {
-          "webhook_secret": "If set, requests must carry X-Webhook-Signature = HMAC-SHA256(body).",
+          "webhook_secret": "If set, requests must carry Authorization: Bearer SECRET (the Secret field in BYDMate) or X-Webhook-Signature = HMAC-SHA256(body).",
           "capacity": "Leave empty to use the model's capacity."
         }
       }

@@ -16,7 +16,7 @@
       },
       "webhook": {
         "title": "Адреса вебхука",
-        "description": "Встав цю адресу у свій застосунок (у BYDMate: Налаштування → Home Assistant → Webhook URL). Авто з'явиться, щойно прийде перший пакет.\n\n`{webhook_url}`"
+        "description": "Встав цю адресу у свій застосунок (у BYDMate: Settings → Integrations → Webhook: telemetry, потім увімкни Live data → your own server). Авто з'явиться, щойно прийде перший пакет.\n\n`{webhook_url}`"
       }
     },
     "error": {
@@ -34,11 +34,11 @@
           "capacity": "Власна ємність батареї",
           "offline_after": "Вважати офлайн через",
           "record_trips": "Записувати поїздки",
-          "webhook_secret": "HMAC-секрет (необов'язково)",
+          "webhook_secret": "Секрет вебхука (необов'язково)",
           "field_map": "Мапа полів (JSON)"
         },
         "data_description": {
-          "webhook_secret": "Якщо задано, запит має містити X-Webhook-Signature = HMAC-SHA256(тіла).",
+          "webhook_secret": "Якщо задано, запит має містити Authorization: Bearer СЕКРЕТ (поле Secret у BYDMate) або X-Webhook-Signature = HMAC-SHA256(тіла).",
           "capacity": "Залиш порожнім, щоб узяти ємність моделі."
         }
       }

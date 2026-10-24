@@ -193,6 +193,15 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
 
 
+def _authorized(secret: str, body: bytes, request: Request) -> bool:
+    """Accept `Authorization: Bearer <secret>` (BYDMate) or an HMAC-SHA256 body signature."""
+    auth = request.headers.get("Authorization", "")
+    if auth[:7].lower() == "bearer " and hmac.compare_digest(auth[7:].strip().encode(), secret.encode()):
+        return True
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, request.headers.get("X-Webhook-Signature", ""))
+
+
 async def _handle_webhook(hass: HomeAssistant, webhook_id: str, request: Request) -> Response:
     vehicle = next((v for v in hass.data.get(DOMAIN, {}).values()
                     if isinstance(v, Vehicle) and v.entry.data.get(CONF_WEBHOOK_ID) == webhook_id), None)
@@ -201,10 +210,8 @@ async def _handle_webhook(hass: HomeAssistant, webhook_id: str, request: Request
     body = await request.read()
 
     secret = vehicle.opt(CONF_SECRET, "")
-    if secret:
-        expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, request.headers.get("X-Webhook-Signature", "")):
-            return json_response({"error": "invalid_signature"}, status=403)
+    if secret and not _authorized(secret, body, request):
+        return json_response({"error": "invalid_signature"}, status=403)
 
     try:
         payload = json.loads(body) if body else {}

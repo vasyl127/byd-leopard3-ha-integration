@@ -27,7 +27,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
   - alerts at the top: flat or low tyre, low and critical battery, weak 12 V battery, hot battery, cell imbalance, open doors, hood or trunk, unlocked doors, open windows;
   - charging forecast: time to the target and the clock time it finishes (DC slows down above 80%);
   - offline view hides stale values and shows when the last packet came;
-  - car colour: all Leopard 3 colours (black, white, silver, grey, green, blue, Micro Light Pink, Ice Crystal Blue) or any custom colour;
+  - car colour: the factory Leopard 3 / Tai 3 colours (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) or any custom colour;
   - English and Ukrainian, configured in the visual editor.
 
 ## Install
@@ -37,6 +37,8 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
 1. HACS → ⋮ → **Custom repositories** → add `https://github.com/vasyl127/byd-leopard3-ha-integration`, type **Integration**.
 2. Find **BYD Leopard 3** in HACS and download it.
 3. Restart Home Assistant.
+
+Requires Home Assistant 2024.11 or newer.
 
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=vasyl127&repository=byd-leopard3-ha-integration&category=integration)
 
@@ -49,14 +51,14 @@ Copy `custom_components/byd_leopard3` into your `config/custom_components/` and 
 1. **Settings → Devices & services → Add integration → BYD Leopard 3.**
 2. Give the car a name, pick the model and the data source (leave *Detect automatically* if unsure).
 3. Copy the webhook URL that the next step shows and paste it into your app:
-   - **BYDMate**: Settings → Home Assistant → Webhook URL. Turn on *Send coordinates to the webhook* to get the location and trip routes.
+   - **BYDMate**: Settings → Integrations → **Webhook: telemetry** → paste the URL → *Save webhook*, then turn on *Live data → your own server*. Turn on *Send coordinates to the webhook* to get the location and trip routes. BYDMate only sends to `https://` URLs, so Home Assistant has to be reachable over HTTPS.
    - **BYD EV Pro**: the Home Assistant webhook setting.
    - **Anything else**: `POST` JSON to the URL.
 4. The entities show up with the first packet.
 
 Then add the card: Dashboard → Edit → Add card → **BYD Leopard 3**. Everything is set in the visual editor.
 
-> The webhook URL is a secret. If Home Assistant is reachable from the internet, anyone with the URL can post data. Set an **HMAC secret** in the integration options if your app supports signing (`X-Webhook-Signature: hex(HMAC-SHA256(secret, body))`).
+> The webhook URL is a secret. If Home Assistant is reachable from the internet, anyone with the URL can post data. To lock it down, set a **webhook secret** in the integration options and the same value in your app. Requests are accepted with `Authorization: Bearer <secret>` (the *Secret* field in BYDMate) or with an HMAC signature (`X-Webhook-Signature: hex(HMAC-SHA256(secret, body))`). Anything else gets `403`.
 
 ## Data formats
 
@@ -127,7 +129,7 @@ type: custom:byd-leopard3-card
 entry_id: 01J...            # which car (optional when you have one)
 layout: combo               # car | trips | combo
 language: auto              # auto | uk | en
-color: blue                 # black | white | silver | grey | green | blue | pink | ice_blue | custom
+color: green                # black | white | silver | green | pink | ice_blue | purple | custom
 custom_color: [233, 30, 99] # with color: custom
 show_alerts: true
 show_seat_heat: true
@@ -172,8 +174,9 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 1. HACS → ⋮ → **Custom repositories** → `https://github.com/vasyl127/byd-leopard3-ha-integration`, тип **Integration**.
 2. Знайди **BYD Leopard 3** у HACS, завантаж і перезапусти Home Assistant.
 3. **Налаштування → Пристрої та служби → Додати інтеграцію → BYD Leopard 3.** Вкажи назву, модель і джерело даних (якщо не впевнений, лиши «Визначати автоматично»).
-4. Скопіюй адресу вебхука і встав її в застосунок. У BYDMate це Налаштування → Home Assistant → Webhook URL. Щоб мати локацію і маршрути поїздок, увімкни *Send coordinates to the webhook*.
-5. Датчики з'являться з першим пакетом. Додай картку: Дашборд → Редагувати → Додати картку → **BYD Leopard 3**. Усе налаштовується у візуальному редакторі: варіант картки, мова, колір авто, сповіщення, підігрів керма, пороги.
+4. Скопіюй адресу вебхука і встав її в застосунок. У BYDMate це Settings → Integrations → **Webhook: telemetry**: встав адресу, натисни *Save webhook* і увімкни *Live data → your own server*. Щоб мати локацію і маршрути поїздок, увімкни *Send coordinates to the webhook*. BYDMate надсилає дані лише на `https://`, тож Home Assistant має бути доступний через HTTPS.
+5. Щоб ніхто сторонній не міг слати дані на вебхук, задай **секрет вебхука** в параметрах інтеграції і той самий рядок у полі *Secret* у BYDMate.
+6. Датчики з'являться з першим пакетом. Додай картку: Дашборд → Редагувати → Додати картку → **BYD Leopard 3**. Усе налаштовується у візуальному редакторі: варіант картки, мова, колір авто, сповіщення, підігрів керма, пороги.
 
 ### Що вміє
 
@@ -181,7 +184,7 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 - Створює лише ті датчики, які авто справді надсилає. Назви датчиків перекладені англійською та українською.
 - Записує поїздки за логікою BYDMate і зберігає їх локально в Home Assistant.
 - Картка має три варіанти: авто, поїздки, комплект. Комплект на широкому екрані показує поїздки справа, а на телефоні знизу.
-- Колір авто: усі кольори Leopard 3 або будь-який свій.
+- Колір авто: заводські кольори Leopard 3 / Tai 3 (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) або будь-який свій.
 - Сповіщення: спущене чи низьке колесо, низький заряд, слабкий 12 В, гаряча батарея, розбаланс комірок, відчинені двері, багажник чи капот, незамкнені двері, відкриті вікна.
 - Коли даних немає, картка ховає застарілі значення і показує, коли прийшов останній пакет.
 

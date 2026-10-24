@@ -80,6 +80,27 @@ async def test_hmac_and_bad_json(hass: HomeAssistant, hass_client_no_auth):
     assert resp.status in (400, 403)
 
 
+async def test_secret_bearer_and_hmac(hass: HomeAssistant, hass_client_no_auth):
+    """BYDMate sends the secret as `Authorization: Bearer`; HMAC signing also works."""
+    import hashlib
+    import hmac
+    import json
+
+    entry = await _setup(hass)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "webhook_secret": "s3cret"})
+    await hass.async_block_till_done()
+    client = await hass_client_no_auth()
+    url = f"/api/webhook/{entry.data['webhook_id']}"
+    resp = await client.post(url, json=BYDMATE, headers={"Authorization": "Bearer wrong"})
+    assert resp.status == 403
+    resp = await client.post(url, json=BYDMATE, headers={"Authorization": "Bearer s3cret"})
+    assert resp.status == 200
+    body = json.dumps(BYDMATE).encode()
+    sig = hmac.new(b"s3cret", body, hashlib.sha256).hexdigest()
+    resp = await client.post(url, data=body, headers={"content-type": "application/json", "X-Webhook-Signature": sig})
+    assert resp.status == 200
+
+
 async def test_options_flow(hass: HomeAssistant):
     entry = await _setup(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
