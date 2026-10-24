@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "byd_leopard3"
 MANUFACTURER = "BYD"
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 CONF_WEBHOOK_ID = "webhook_id"
 CONF_SOURCE = "source"
