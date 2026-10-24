@@ -207,6 +207,8 @@ const per100Cls = (v) => v == null ? '' : v < 20 ? 'c-good' : v <= 25 ? 'c-mid' 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 const speedColor = (v) => v < 30 ? '#4fc3f7' : v < 60 ? '#66bb6a' : v < 90 ? '#ffca28' : '#ef5350';
+// Attributes that open the entity's more-info dialog (history graph) on click.
+const more = (eid) => eid ? ` data-act="more" data-e="${eid}" role="button" tabindex="0"` : '';
 const IMG_W = 949, IMG_H = 372, WHEEL_R = 66, WHEELS = [[165, 282], [738, 282]];
 
 const DEFAULTS = {
@@ -264,7 +266,7 @@ class BydLeopard3Card extends HTMLElement {
     this.$ = (id) => root.getElementById(id);
     this._applyLayout();
     root.addEventListener('click', (e) => this._onClick(e));
-    root.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList?.contains('trow')){ e.preventDefault(); e.target.click(); } });
+    root.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset?.act){ e.preventDefault(); e.target.click(); } });
     this._tick = setInterval(() => this._render(), 15000);   // "N s ago" and offline detection
     try {
       const list = await this._hass.callWS({type: `${DOMAIN}/vehicles`});
@@ -298,6 +300,7 @@ class BydLeopard3Card extends HTMLElement {
 
   /* -- state access -- */
   _eid(key){ return this._veh?.entities?.[key]; }
+  _more(key){ const id = this._eid(key); return id && this._hass?.states?.[id] ? more(id) : ''; }
   _st(key){ const id = this._eid(key); return id ? this._hass.states[id] : undefined; }
   v(key){
     const s = this._st(key);
@@ -357,9 +360,10 @@ class BydLeopard3Card extends HTMLElement {
     }
   }
 
-  _tile(key, value, unit, sub = '', icon = '', cls = ''){
+  _tile(key, value, unit, sub = '', icon = '', cls = '', ent = ''){
     if (value == null || value === '') return '';
-    return `<div class="tile ${cls}"><div class="k">${icon ? ic(icon) : ''}${key}</div>
+    const m = ent ? this._more(ent) : '';
+    return `<div class="tile ${cls} ${m ? 'clk' : ''}"${m}><div class="k">${icon ? ic(icon) : ''}${key}</div>
       <div class="v"><span>${value}</span>${unit ? `<small>${unit}</small>` : ''}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
   }
   _alerts(d){
@@ -421,11 +425,12 @@ class BydLeopard3Card extends HTMLElement {
     return this.t('ago', {v});
   }
   _stamp(ms){ return new Date(ms).toLocaleString(STR[this.lang].locale, {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
-  _tyre(ty){
+  _tyre(ty, w){
     const [p, temp, st] = ty;
     if (p == null && temp == null && st == null) return '<div class="tyre"></div>';
     const low = (p != null && p < this._cfg.tyre_min) || (st && st !== 'normal');
-    return `<div class="tyre ${low ? 'low' : ''}">
+    const m = this._more('tyre_pressure_' + w) || this._more('tyre_state_' + w);
+    return `<div class="tyre ${low ? 'low' : ''} ${m ? 'clk' : ''}"${m}>
       ${p != null ? `<div class="p">${this.nf(p,2)}<small> bar</small></div>` : ''}
       ${temp != null ? `<div class="t">${Math.round(temp)}°C</div>` : ''}
       <div class="st">${low ? (st === 'high' ? this.t('tyre_high') : this.t('tyre_low')) : this.t('tyre_ok')}</div></div>`;
@@ -447,80 +452,80 @@ class BydLeopard3Card extends HTMLElement {
     const p = d.power, pcls = p == null ? '' : p < 0 ? 'neg' : p > 1 ? 'pos' : '';
     const gun = d.gun && d.gun !== 'disconnected' ? d.gun.toUpperCase() : null;
     const chips = [
-      d.charging ? (d.dcfc ? `<span class="chip dc">${ic('bolt')} ${t('dc_fast')}</span>` : `<span class="chip ok">${ic('plug')} ${t('connected', {g: gun || 'AC'})}</span>`)
-        : (driving ? '' : `<span class="chip">${ic('plug')} ${t('not_connected')}</span>`),
-      d.ac === 'on' && d.setpoint != null ? `<span class="chip info">${ic('snow')} ${t('climate', {t:nf(d.setpoint,0)})}</span>` : '',
-      d.place ? `<span class="chip">${ic('pin')} ${esc(d.place)}</span>` : '',
+      d.charging ? (d.dcfc ? `<span class="chip dc"${this._more('is_dcfc')}>${ic('bolt')} ${t('dc_fast')}</span>` : `<span class="chip ok"${this._more('charging_gun') || this._more('is_charging')}>${ic('plug')} ${t('connected', {g: gun || 'AC'})}</span>`)
+        : (driving ? '' : `<span class="chip"${this._more('charging_gun') || this._more('is_charging')}>${ic('plug')} ${t('not_connected')}</span>`),
+      d.ac === 'on' && d.setpoint != null ? `<span class="chip info"${this._more('climate')}>${ic('snow')} ${t('climate', {t:nf(d.setpoint,0)})}</span>` : '',
+      d.place ? `<span class="chip"${this._more('location')}>${ic('pin')} ${esc(d.place)}</span>` : '',
     ].join('');
     const chg = d.charging ? `
       <div class="chg ${d.dcfc ? 'dc' : ''}">
-        <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(127,127,127,.3)" stroke-width="3"/>
+        <svg class="ring"${this._more('soc')} viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(127,127,127,.3)" stroke-width="3"/>
           <circle cx="18" cy="18" r="15.5" fill="none" stroke="${d.dcfc ? '#ba68c8' : '#66bb6a'}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${((d.soc ?? 0)/100*97.4).toFixed(1)} 97.4" transform="rotate(-90 18 18)"/>
           <text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="500" fill="currentColor">${Math.round(d.soc ?? 0)}%</text></svg>
         <div>
-          <div class="pw">${p != null ? nf(Math.abs(p),1) : '—'} <small>${t('kw')} · ${d.dcfc ? t('dc_fast') : (gun || 'AC')}</small></div>
+          <div class="pw"${this._more('power')}>${p != null ? nf(Math.abs(p),1) : '—'} <small>${t('kw')} · ${d.dcfc ? t('dc_fast') : (gun || 'AC')}</small></div>
           <div class="meta">
-            ${d.session != null ? `<span>${t('session')} <b>${nf(d.session,2)} ${t('kwh')}</b></span>` : ''}
-            ${d.voltage != null ? `<span><b>${nf(d.voltage,0)} ${t('v')}</b>${d.current != null ? ` · <b>${nf(Math.abs(d.current),1)} ${t('a')}</b>` : ''}</span>` : ''}
+            ${d.session != null ? `<span${this._more('kwh_charged')}>${t('session')} <b>${nf(d.session,2)} ${t('kwh')}</b></span>` : ''}
+            ${d.voltage != null ? `<span${this._more('voltage')}><b>${nf(d.voltage,0)} ${t('v')}</b>${d.current != null ? ` · <b>${nf(Math.abs(d.current),1)} ${t('a')}</b>` : ''}</span>` : ''}
           </div>
         </div>
         ${eta ? `<div class="eta"><div><span>${t('to_target', {t:eta.target})}</span><b>${eta.left}</b></div>
           <div class="end">${ic('clock')} ${eta.end}</div>${eta.taper ? `<div class="taper">${t('taper')}</div>` : ''}</div>` : ''}
       </div>` : `
       <div class="grid">
-        ${this._tile(t('state'), t('not_charging'), '', d.gun ? t('gun', {g: gun || t('gun_off')}) : '', 'plug', 'wide')}
-        ${this._tile(t('last_session'), nf(d.session,2), t('kwh'), '', 'bolt')}
+        ${this._tile(t('state'), t('not_charging'), '', d.gun ? t('gun', {g: gun || t('gun_off')}) : '', 'plug', 'wide', 'is_charging')}
+        ${this._tile(t('last_session'), nf(d.session,2), t('kwh'), '', 'bolt', '', 'kwh_charged')}
       </div>`;
     const battery = [
-      this._tile(t('power'), p == null ? null : `<span class="${pcls}">${nf(p,1)}</span>`, t('kw'), p == null ? '' : p < 0 ? t('charging_l') : p > 1 ? t('discharge') : t('idle'), 'bolt'),
-      this._tile(t('voltage'), nf(d.voltage,0), t('v'), '', 'wave'),
-      this._tile(t('current'), d.current == null ? null : `<span class="${pcls}">${nf(d.current,1)}</span>`, t('a'), '', 'wave'),
-      this._tile(t('batt_temp'), nf(d.batt_temp,1), '°C', d.batt_min != null && d.batt_max != null ? t('minmax', {a:Math.round(d.batt_min), b:Math.round(d.batt_max)}) : '', 'therm'),
-      this._tile(t('capacity'), nf(d.capacity,1), t('kwh'), t('nominal'), 'batt'),
-      this._tile(t('soh'), nf(d.soh,1), '%', '', 'heart'),
-      this._tile(t('cells'), nf(d.cell_max,3), t('v'), d.cell_min != null ? t('cells_sub', {a:nf(d.cell_min,3), d:Math.round((d.cell_max-d.cell_min)*1000)}) : '', 'cpu'),
-      this._tile(t('aux'), nf(d.aux_voltage,1), t('v'), '', 'batt'),
-      this._tile(t('vstate'), d.vehicle_state != null ? t('vs_' + d.vehicle_state) : null, '', '', 'cpu'),
+      this._tile(t('power'), p == null ? null : `<span class="${pcls}">${nf(p,1)}</span>`, t('kw'), p == null ? '' : p < 0 ? t('charging_l') : p > 1 ? t('discharge') : t('idle'), 'bolt', '', 'power'),
+      this._tile(t('voltage'), nf(d.voltage,0), t('v'), '', 'wave', '', 'voltage'),
+      this._tile(t('current'), d.current == null ? null : `<span class="${pcls}">${nf(d.current,1)}</span>`, t('a'), '', 'wave', '', 'current'),
+      this._tile(t('batt_temp'), nf(d.batt_temp,1), '°C', d.batt_min != null && d.batt_max != null ? t('minmax', {a:Math.round(d.batt_min), b:Math.round(d.batt_max)}) : '', 'therm', '', 'batt_temp'),
+      this._tile(t('capacity'), nf(d.capacity,1), t('kwh'), t('nominal'), 'batt', '', 'capacity'),
+      this._tile(t('soh'), nf(d.soh,1), '%', '', 'heart', '', 'soh'),
+      this._tile(t('cells'), nf(d.cell_max,3), t('v'), d.cell_min != null ? t('cells_sub', {a:nf(d.cell_min,3), d:Math.round((d.cell_max-d.cell_min)*1000)}) : '', 'cpu', '', 'cell_max_v'),
+      this._tile(t('aux'), nf(d.aux_voltage,1), t('v'), '', 'batt', '', 'aux_voltage'),
+      this._tile(t('vstate'), d.vehicle_state != null ? t('vs_' + d.vehicle_state) : null, '', '', 'cpu', '', 'vehicle_state'),
     ].join('');
     const motion = [
-      this._tile(t('speed'), Math.round(d.speed), t('kmh'), '', 'gauge'),
-      this._tile(t('motors'), d.fm_temp != null || d.rm_temp != null ? `${d.fm_temp != null ? Math.round(d.fm_temp) + '°' : '—'} / ${d.rm_temp != null ? Math.round(d.rm_temp) + '°' : '—'}` : null, '', t('front_rear'), 'therm'),
-      this._tile(t('rpm'), d.rpm != null ? Math.round(d.rpm).toLocaleString(STR[this.lang].locale) : null, 'RPM', t('front_motor'), 'fan'),
+      this._tile(t('speed'), Math.round(d.speed), t('kmh'), '', 'gauge', '', 'speed'),
+      this._tile(t('motors'), d.fm_temp != null || d.rm_temp != null ? `${d.fm_temp != null ? Math.round(d.fm_temp) + '°' : '—'} / ${d.rm_temp != null ? Math.round(d.rm_temp) + '°' : '—'}` : null, '', t('front_rear'), 'therm', '', d.fm_temp != null ? 'front_motor_temp' : 'rear_motor_temp'),
+      this._tile(t('rpm'), d.rpm != null ? Math.round(d.rpm).toLocaleString(STR[this.lang].locale) : null, 'RPM', t('front_motor'), 'fan', '', 'motor_rpm'),
     ].join('');
     const climate = [
-      this._tile(t('cabin'), nf(d.cabin,1), '°C', '', 'therm'),
-      this._tile(t('outside'), nf(d.outside,1), '°C', '', 'therm'),
-      this._tile(t('setpoint'), nf(d.setpoint,1), '°C', d.ac != null ? t('ac_fan', {a: d.ac === 'on' ? t('on') : t('off'), f: d.fan == null || d.fan === 'off' || d.fan === '0' ? t('off') : d.fan}) : '', 'snow'),
-      c.show_seat_heat ? this._tile(t('seat'), d.seat == null ? null : d.seat === 'off' ? t('off_v') : t('lvl_' + d.seat), '', t('heat'), 'therm') : '',
-      c.show_steering_heat ? this._tile(t('wheel'), d.wheel == null ? null : d.wheel === 'off' ? t('off_v') : t('on_v'), '', t('heat'), 'therm') : '',
-      d.sunroof && d.sunroof !== 'not_equipped' ? this._tile(t('roof'), t('roof_' + d.sunroof), '', d.sunshade && d.sunshade !== 'not_equipped' ? t('shade', {s: t('roof_' + d.sunshade).toLowerCase()}) : '', 'fan') : '',
+      this._tile(t('cabin'), nf(d.cabin,1), '°C', '', 'therm', '', 'cabin_temp'),
+      this._tile(t('outside'), nf(d.outside,1), '°C', '', 'therm', '', 'ext_temp'),
+      this._tile(t('setpoint'), nf(d.setpoint,1), '°C', d.ac != null ? t('ac_fan', {a: d.ac === 'on' ? t('on') : t('off'), f: d.fan == null || d.fan === 'off' || d.fan === '0' ? t('off') : d.fan}) : '', 'snow', '', 'hvac_setpoint'),
+      c.show_seat_heat ? this._tile(t('seat'), d.seat == null ? null : d.seat === 'off' ? t('off_v') : t('lvl_' + d.seat), '', t('heat'), 'therm', '', 'seat_heat') : '',
+      c.show_steering_heat ? this._tile(t('wheel'), d.wheel == null ? null : d.wheel === 'off' ? t('off_v') : t('on_v'), '', t('heat'), 'therm', '', 'steering_heat') : '',
+      d.sunroof && d.sunroof !== 'not_equipped' ? this._tile(t('roof'), t('roof_' + d.sunroof), '', d.sunshade && d.sunshade !== 'not_equipped' ? t('shade', {s: t('roof_' + d.sunshade).toLowerCase()}) : '', 'fan', '', 'sunroof') : '',
     ].join('');
     const ty = d.tyres, hasTyres = ['fl','fr','rl','rr'].some(w => ty[w].some(x => x != null));
     const hasLocks = ['fl','fr','rl','rr'].some(k => d.locks[k] != null);
     const winKnown = ['fl','fr','rl','rr'].some(k => d.windows[k] != null);
     const winOpen = ['fl','fr','rl','rr'].filter(k => (d.windows[k] ?? 0) > 0);
-    const lockChip = (k) => d.locks[k] == null ? '' : `<span class="chip ${d.locks[k] === 'locked' ? '' : 'warn'}">${ic(d.locks[k] === 'locked' ? 'lock' : 'unlock')} ${t(k)}</span>`;
+    const lockChip = (k) => d.locks[k] == null ? '' : `<span class="chip ${d.locks[k] === 'locked' ? '' : 'warn'}"${this._more('lock_' + k)}>${ic(d.locks[k] === 'locked' ? 'lock' : 'unlock')} ${t(k)}</span>`;
     const body = hasTyres || hasLocks || winKnown || d.hood != null || d.trunk != null;
     const ups = d.updated ? this._ago(d.updated) : '—';
 
     return `
       ${this._alerts(d)}
       <div class="head">
-        <div><h2>${esc(this._cfg.title || this._veh.title)}</h2><div class="status"><span class="dot ${dot}"></span>${status}</div></div>
-        ${d.odo != null ? `<div class="odo">${ic('gauge')} ${Math.round(d.odo).toLocaleString(STR[this.lang].locale)} ${t('km')}</div>` : ''}
+        <div><h2>${esc(this._cfg.title || this._veh.title)}</h2><div class="status"${this._more(d.charging ? 'is_charging' : 'is_parked')}><span class="dot ${dot}"></span>${status}</div></div>
+        ${d.odo != null ? `<div class="odo"${this._more('odometer')}>${ic('gauge')} ${Math.round(d.odo).toLocaleString(STR[this.lang].locale)} ${t('km')}</div>` : ''}
       </div>
       <div class="hero ${driving ? 'driving' : ''}" data-k="hero">
         ${d.parked ? `<div class="psign" role="img" aria-label="${t('parked')}">P<small>${t('parking')}</small></div>` : ''}
-        ${driving ? `<div class="spd"><b>${Math.round(d.speed)}</b><span>${t('kmh')}</span></div>` : ''}
+        ${driving ? `<div class="spd"${this._more('speed')}><b>${Math.round(d.speed)}</b><span>${t('kmh')}</span></div>` : ''}
         <div class="scene"><div class="road"></div><div class="streaks"><i></i><i></i><i></i></div></div>
         <div class="carwrap"><img src="${this._side}" alt="">${this._cfg.image_side ? '' : WHEELS.map(w => this._wheel(w)).join('')}</div>
       </div>
       <div class="chips">${chips}</div>
       ${d.soc != null ? `<div class="soc">
-        <div class="soc-row"><div class="soc-big">${Math.round(d.soc)}<small>%</small></div>
-          ${d.range != null ? `<div class="range">${t('range')} <b>${Math.round(d.range)} ${t('km')}</b></div>` : ''}</div>
-        <div class="bar" role="img" aria-label="${Math.round(d.soc)}%"><i class="${socCls} ${d.charging ? 'charging' : ''}" style="width:${d.soc}%"></i></div>
-        <div class="energy">${usable != null ? `<span>${t('of_cap', {u:nf(usable,1), c:nf(d.capacity,1)})}</span>` : '<span></span>'}${d.soh != null ? `<span>SoH ${nf(d.soh,1)}%</span>` : ''}</div>
+        <div class="soc-row"><div class="soc-big"${this._more('soc')}>${Math.round(d.soc)}<small>%</small></div>
+          ${d.range != null ? `<div class="range"${this._more('range')}>${t('range')} <b>${Math.round(d.range)} ${t('km')}</b></div>` : ''}</div>
+        <div class="bar"${this._more('soc') || ' role="img"'} aria-label="${Math.round(d.soc)}%"><i class="${socCls} ${d.charging ? 'charging' : ''}" style="width:${d.soc}%"></i></div>
+        <div class="energy">${usable != null ? `<span>${t('of_cap', {u:nf(usable,1), c:nf(d.capacity,1)})}</span>` : '<span></span>'}${d.soh != null ? `<span${this._more('soh')}>SoH ${nf(d.soh,1)}%</span>` : ''}</div>
       </div>` : ''}
       ${driving ? '' : `<section class="blk"><h3>${t('sec_charging')}</h3>${chg}</section>`}
       ${battery ? `<section class="blk"><h3>${t('sec_battery')}</h3><div class="grid">${battery}</div></section>` : ''}
@@ -528,18 +533,18 @@ class BydLeopard3Card extends HTMLElement {
       ${climate ? `<section class="blk"><h3>${t('sec_climate')}</h3><div class="grid">${climate}</div></section>` : ''}
       ${body ? `<section class="blk"><h3>${t('sec_body')}</h3>
         <div class="top">
-          <div class="col">${this._tyre(ty.fl)}${this._tyre(ty.rl)}</div>
+          <div class="col">${this._tyre(ty.fl, 'fl')}${this._tyre(ty.rl, 'rl')}</div>
           <div class="topcar"><img src="${this._top}" alt="">
-            ${d.hood != null ? `<span class="lbl ${d.hood === 'open' ? 'open' : ''}" style="top:8px">${t('hood', {s: d.hood === 'open' ? t('open_n') : t('closed_n')})}</span>` : ''}
-            ${d.cabin != null ? `<span class="lbl" style="top:47%">${nf(d.cabin,1)} °C</span>` : ''}
-            ${d.trunk != null ? `<span class="lbl ${d.trunk === 'open' ? 'open' : ''}" style="bottom:8px">${t('trunk', {s: d.trunk === 'open' ? t('open_n') : t('closed_n')})}</span>` : ''}
+            ${d.hood != null ? `<span class="lbl ${d.hood === 'open' ? 'open' : ''}" style="top:8px"${this._more('hood')}>${t('hood', {s: d.hood === 'open' ? t('open_n') : t('closed_n')})}</span>` : ''}
+            ${d.cabin != null ? `<span class="lbl" style="top:47%"${this._more('cabin_temp')}>${nf(d.cabin,1)} °C</span>` : ''}
+            ${d.trunk != null ? `<span class="lbl ${d.trunk === 'open' ? 'open' : ''}" style="bottom:8px"${this._more('trunk')}>${t('trunk', {s: d.trunk === 'open' ? t('open_n') : t('closed_n')})}</span>` : ''}
           </div>
-          <div class="col r">${this._tyre(ty.fr)}${this._tyre(ty.rr)}</div>
+          <div class="col r">${this._tyre(ty.fr, 'fr')}${this._tyre(ty.rr, 'rr')}</div>
         </div>
         <div class="locks">${lockChip('fl')}${lockChip('fr')}${lockChip('rl')}${lockChip('rr')}
           ${winKnown ? (winOpen.length ? `<span class="chip warn">${t('win_open', {w: winOpen.map(k => t(k).toLowerCase() + ' ' + Math.round(d.windows[k]) + '%').join(', ')})}</span>` : `<span class="chip ok">${t('win_closed')}</span>`) : ''}
         </div></section>` : ''}
-      <div class="foot"><span>${ic('clock')} ${t('updated')} <b>${ups}</b></span><span>${d.updated ? this._stamp(d.updated) : ''}</span></div>`;
+      <div class="foot"${this._more('last_update')}><span>${ic('clock')} ${t('updated')} <b>${ups}</b></span><span>${d.updated ? this._stamp(d.updated) : ''}</span></div>`;
   }
 
   _offlineHtml(d){
@@ -550,16 +555,16 @@ class BydLeopard3Card extends HTMLElement {
     const st = d.charging ? t('st_charging') : !d.parked ? t('st_driving') : t('st_parked');
     return `
       <div class="head"><div><h2>${esc(this._cfg.title || this._veh.title)}</h2>
-        <div class="status"><span class="dot ${alert ? 'off' : 'stale'}"></span>${alert ? t('no_link') : t('asleep')}</div></div></div>
+        <div class="status"${this._more('online')}><span class="dot ${alert ? 'off' : 'stale'}"></span>${alert ? t('no_link') : t('asleep')}</div></div></div>
       <div class="hero offline" data-k="hero-off"><div class="carwrap"><img src="${this._side}" alt=""></div></div>
       <div class="offline-box ${alert ? 'alert' : ''}"><div class="ico">${svg(alert ? 'wifioff' : 'moon')}</div>
         <div><h4>${alert ? t('no_data') : t('mm_off')}</h4>
         <p>${d.updated ? (alert ? t('no_data_p', {a:this._ago(d.updated), s:st}) : t('asleep_p', {a:this._ago(d.updated)})) : ''}</p></div></div>
       <div class="lastknown">
-        ${d.place ? `<span class="chip">${ic('pin')} ${t('last_place', {p:esc(d.place)})}</span>` : ''}
+        ${d.place ? `<span class="chip"${this._more('location')}>${ic('pin')} ${t('last_place', {p:esc(d.place)})}</span>` : ''}
         ${lt ? `<span class="chip">${ic('route')} ${t('last_trip', {a:hm(lt.start), b:hm(lt.end), k:this.nf(lt.km,1)})}</span>` : ''}
       </div>
-      <div class="foot ${alert ? 'offline' : ''}"><span>${ic('clock')} ${t('last_packet')}</span><span>${d.updated ? this._stamp(d.updated) : ''}</span></div>`;
+      <div class="foot ${alert ? 'offline' : ''}"${this._more('last_update')}><span>${ic('clock')} ${t('last_packet')}</span><span>${d.updated ? this._stamp(d.updated) : ''}</span></div>`;
   }
 
   _tempo(d){
@@ -705,7 +710,10 @@ class BydLeopard3Card extends HTMLElement {
   async _onClick(e){
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.dataset.act;
-    if (act === 'alerts'){ this._alertsOpen = !this._alertsOpen; this._render(true); }
+    if (act === 'more'){
+      this.dispatchEvent(new CustomEvent('hass-more-info', {detail: {entityId: el.dataset.e}, bubbles: true, composed: true}));
+    }
+    else if (act === 'alerts'){ this._alertsOpen = !this._alertsOpen; this._render(true); }
     else if (act === 'period'){ this._period = +el.dataset.p; await this._refreshTrips(); }
     else if (act === 'day'){ const k = el.dataset.day; const box = el.parentElement; this._open[k] = !box.classList.contains('open'); this._renderTrips(); }
     else if (act === 'trip'){ this._sel = el.dataset.id; this._fitted = false; this._renderTrips(); await this._loadRoute(this._sel, true); }
@@ -983,6 +991,15 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .chg .eta b{font-size:18px;font-weight:500}
 .chg .eta .end{display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px;white-space:nowrap}
 .chg .eta .taper{flex-basis:100%;color:var(--faint);font-size:11px}
+/* Clickable attributes: open the entity's history (more-info) */
+[data-act=more]{cursor:pointer}
+.tile.clk{transition:background .15s}
+.tile.clk:hover,.tyre.clk:hover{background:color-mix(in srgb,var(--card-2) 82%,var(--text))}
+.tyre.clk{border-radius:8px;padding:2px 4px;margin:-2px -4px}
+.chip[data-act=more]:hover,.lbl[data-act=more]:hover{filter:brightness(1.2)}
+.odo[data-act=more]:hover,.status[data-act=more]:hover,.soc-big[data-act=more]:hover,.range[data-act=more]:hover,.foot[data-act=more]:hover span:first-child,.energy [data-act=more]:hover,.chg [data-act=more]:hover{color:var(--accent)}
+[data-act=more]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
 /* Card editor */
 `;
 

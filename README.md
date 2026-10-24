@@ -24,6 +24,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
 - **Online / offline**: a connectivity sensor turns off when packets stop.
 - **The card** (installed automatically, no resource to add):
   - three layouts: *car*, *trips*, or *combined* (side by side on wide screens, stacked on phones; it reacts to the card's own width);
+  - tap any value (charge, power, temperatures, tyres, locks, odometer, …) to open its Home Assistant history graph, like any sensor;
   - animated wheels and road while driving, a parking sign when parked;
   - alerts at the top: flat or low tyre, low and critical battery, weak 12 V battery, hot battery, cell imbalance, open doors, hood or trunk, unlocked doors, open windows;
   - charging forecast: time to the target and the clock time it finishes (DC slows down above 80%);
@@ -197,6 +198,7 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 - Створює лише ті датчики, які авто справді надсилає. Назви датчиків перекладені англійською та українською.
 - Записує поїздки за логікою BYDMate у локальну базу SQLite (`config/byd_leopard3.db`): усі поїздки з повними GPS-маршрутами зберігаються назавжди, телеметрія — 365 днів (змінюється в параметрах інтеграції, `0` — без обмеження). Дані переживають перезапуск і потрапляють у бекапи HA. У картці є періоди «Рік» і «Все».
 - Картка має три варіанти: авто, поїздки, комплект. Комплект на широкому екрані показує поїздки справа, а на телефоні знизу.
+- Натисни на будь-яке значення (заряд, потужність, температури, шини, замки, пробіг…), і відкриється його графік історії, як у звичайного сенсора HA.
 - Колір авто: заводські кольори Leopard 3 / Tai 3 (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) або будь-який свій.
 - Сповіщення: спущене чи низьке колесо, низький заряд, слабкий 12 В, гаряча батарея, розбаланс комірок, відчинені двері, багажник чи капот, незамкнені двері, відкриті вікна.
 - Коли даних немає, картка ховає застарілі значення і показує, коли прийшов останній пакет.
