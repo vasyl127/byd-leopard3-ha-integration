@@ -1,0 +1,368 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BYD Leopard 3",
+        "description": "Підключи авто, яке надсилає телеметрію на вебхук Home Assistant: BYDMate, BYD EV Pro або будь-який застосунок, що вміє надсилати JSON.",
+        "data": {
+          "name": "Назва",
+          "model": "Модель",
+          "source": "Джерело даних",
+          "field_map": "Мапа полів (JSON, лише для свого джерела)"
+        },
+        "data_description": {
+          "field_map": "Приклад: {\"soc\": \"battery.level\", \"speed\": {\"path\": \"spd\", \"scale\": 3.6}}"
+        }
+      },
+      "webhook": {
+        "title": "Адреса вебхука",
+        "description": "Встав цю адресу у свій застосунок (у BYDMate: Налаштування → Home Assistant → Webhook URL). Авто з'явиться, щойно прийде перший пакет.\n\n`{webhook_url}`"
+      }
+    },
+    "error": {
+      "invalid_json": "Мапа полів не є правильним JSON-об'єктом."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BYD Leopard 3",
+        "description": "Адреса вебхука: `{webhook_url}`",
+        "data": {
+          "model": "Модель",
+          "source": "Джерело даних",
+          "capacity": "Власна ємність батареї",
+          "offline_after": "Вважати офлайн через",
+          "record_trips": "Записувати поїздки",
+          "webhook_secret": "HMAC-секрет (необов'язково)",
+          "field_map": "Мапа полів (JSON)"
+        },
+        "data_description": {
+          "webhook_secret": "Якщо задано, запит має містити X-Webhook-Signature = HMAC-SHA256(тіла).",
+          "capacity": "Залиш порожнім, щоб узяти ємність моделі."
+        }
+      }
+    },
+    "error": {
+      "invalid_json": "Мапа полів не є правильним JSON-об'єктом."
+    }
+  },
+  "selector": {
+    "model": {
+      "options": {
+        "leopard3": "Leopard 3 / Tai 3",
+        "seal": "Seal",
+        "seal_u": "Seal U / Song Plus",
+        "atto3": "Atto 3 / Yuan Plus",
+        "dolphin": "Dolphin",
+        "han": "Han",
+        "tang": "Tang",
+        "other": "Інша модель BYD"
+      }
+    },
+    "source": {
+      "options": {
+        "auto": "Визначати автоматично",
+        "abrp": "BYDMate / ABRP (Iternio)",
+        "byd_ev_pro": "BYD EV Pro",
+        "generic": "Загальний JSON (ключі цієї інтеграції)",
+        "custom": "Свій JSON із мапою полів"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "Рівень заряду"
+      },
+      "soh": {
+        "name": "Стан батареї (SoH)"
+      },
+      "range": {
+        "name": "Запас ходу"
+      },
+      "power": {
+        "name": "Потужність батареї"
+      },
+      "voltage": {
+        "name": "Напруга батареї"
+      },
+      "current": {
+        "name": "Струм батареї"
+      },
+      "batt_temp": {
+        "name": "Температура батареї"
+      },
+      "batt_temp_min": {
+        "name": "Мін. температура батареї"
+      },
+      "batt_temp_max": {
+        "name": "Макс. температура батареї"
+      },
+      "capacity": {
+        "name": "Ємність батареї"
+      },
+      "kwh_charged": {
+        "name": "Заряджено за сесію"
+      },
+      "speed": {
+        "name": "Швидкість"
+      },
+      "odometer": {
+        "name": "Пробіг"
+      },
+      "cabin_temp": {
+        "name": "Температура в салоні"
+      },
+      "ext_temp": {
+        "name": "Температура надворі"
+      },
+      "hvac_setpoint": {
+        "name": "Задана температура клімату"
+      },
+      "aux_voltage": {
+        "name": "Акумулятор 12 В"
+      },
+      "cell_max_v": {
+        "name": "Макс. напруга комірки"
+      },
+      "cell_min_v": {
+        "name": "Мін. напруга комірки"
+      },
+      "front_motor_temp": {
+        "name": "Температура переднього мотора"
+      },
+      "rear_motor_temp": {
+        "name": "Температура заднього мотора"
+      },
+      "motor_rpm": {
+        "name": "Оберти переднього мотора"
+      },
+      "sunroof_pos": {
+        "name": "Положення люка"
+      },
+      "vehicle_state": {
+        "name": "Стан авто"
+      },
+      "fan_speed": {
+        "name": "Швидкість вентилятора"
+      },
+      "last_update": {
+        "name": "Останнє оновлення"
+      },
+      "last_trip": {
+        "name": "Остання поїздка"
+      },
+      "tyre_pressure_fl": {
+        "name": "Тиск, передня ліва"
+      },
+      "tyre_temp_fl": {
+        "name": "Температура шини, передня ліва"
+      },
+      "window_fl": {
+        "name": "Вікно, передня ліва"
+      },
+      "tyre_pressure_fr": {
+        "name": "Тиск, передня права"
+      },
+      "tyre_temp_fr": {
+        "name": "Температура шини, передня права"
+      },
+      "window_fr": {
+        "name": "Вікно, передня права"
+      },
+      "tyre_pressure_rl": {
+        "name": "Тиск, задня ліва"
+      },
+      "tyre_temp_rl": {
+        "name": "Температура шини, задня ліва"
+      },
+      "window_rl": {
+        "name": "Вікно, задня ліва"
+      },
+      "tyre_pressure_rr": {
+        "name": "Тиск, задня права"
+      },
+      "tyre_temp_rr": {
+        "name": "Температура шини, задня права"
+      },
+      "window_rr": {
+        "name": "Вікно, задня права"
+      },
+      "charging_gun": {
+        "name": "Зарядний пістолет",
+        "state": {
+          "disconnected": "Відключено",
+          "ac": "AC",
+          "dc": "DC"
+        }
+      },
+      "climate": {
+        "name": "Клімат",
+        "state": {
+          "on": "Увімкнено",
+          "off": "Вимкнено"
+        }
+      },
+      "seat_heat": {
+        "name": "Підігрів сидіння водія",
+        "state": {
+          "off": "Вимкнено",
+          "level_1": "Рівень 1",
+          "level_2": "Рівень 2"
+        }
+      },
+      "steering_heat": {
+        "name": "Підігрів керма",
+        "state": {
+          "off": "Вимкнено",
+          "on": "Увімкнено"
+        }
+      },
+      "hood": {
+        "name": "Капот",
+        "state": {
+          "open": "Відкрито",
+          "closed": "Закрито"
+        }
+      },
+      "trunk": {
+        "name": "Багажник",
+        "state": {
+          "open": "Відкрито",
+          "closed": "Закрито"
+        }
+      },
+      "sunroof": {
+        "name": "Люк",
+        "state": {
+          "not_equipped": "Немає",
+          "closed": "Закрито",
+          "open": "Відкрито",
+          "opening": "Відкривається",
+          "closing": "Закривається"
+        }
+      },
+      "sunshade": {
+        "name": "Шторка",
+        "state": {
+          "not_equipped": "Немає",
+          "closed": "Закрито",
+          "open": "Відкрито",
+          "opening": "Відкривається",
+          "closing": "Закривається"
+        }
+      },
+      "tyre_state_fl": {
+        "name": "Стан шини, передня ліва",
+        "state": {
+          "normal": "Норма",
+          "low": "Низький",
+          "high": "Високий"
+        }
+      },
+      "lock_fl": {
+        "name": "Замок: двері водія",
+        "state": {
+          "locked": "Замкнено",
+          "unlocked": "Відімкнено"
+        }
+      },
+      "door_fl": {
+        "name": "Двері водія",
+        "state": {
+          "open": "Відчинено",
+          "closed": "Зачинено"
+        }
+      },
+      "tyre_state_fr": {
+        "name": "Стан шини, передня права",
+        "state": {
+          "normal": "Норма",
+          "low": "Низький",
+          "high": "Високий"
+        }
+      },
+      "lock_fr": {
+        "name": "Замок: двері пасажира",
+        "state": {
+          "locked": "Замкнено",
+          "unlocked": "Відімкнено"
+        }
+      },
+      "door_fr": {
+        "name": "Двері пасажира",
+        "state": {
+          "open": "Відчинено",
+          "closed": "Зачинено"
+        }
+      },
+      "tyre_state_rl": {
+        "name": "Стан шини, задня ліва",
+        "state": {
+          "normal": "Норма",
+          "low": "Низький",
+          "high": "Високий"
+        }
+      },
+      "lock_rl": {
+        "name": "Замок: задні ліві двері",
+        "state": {
+          "locked": "Замкнено",
+          "unlocked": "Відімкнено"
+        }
+      },
+      "door_rl": {
+        "name": "Задні ліві двері",
+        "state": {
+          "open": "Відчинено",
+          "closed": "Зачинено"
+        }
+      },
+      "tyre_state_rr": {
+        "name": "Стан шини, задня права",
+        "state": {
+          "normal": "Норма",
+          "low": "Низький",
+          "high": "Високий"
+        }
+      },
+      "lock_rr": {
+        "name": "Замок: задні праві двері",
+        "state": {
+          "locked": "Замкнено",
+          "unlocked": "Відімкнено"
+        }
+      },
+      "door_rr": {
+        "name": "Задні праві двері",
+        "state": {
+          "open": "Відчинено",
+          "closed": "Зачинено"
+        }
+      }
+    },
+    "binary_sensor": {
+      "is_charging": {
+        "name": "Заряджається"
+      },
+      "is_dcfc": {
+        "name": "Швидка DC-зарядка"
+      },
+      "is_parked": {
+        "name": "На стоянці"
+      },
+      "online": {
+        "name": "На зв'язку"
+      },
+      "trip_in_progress": {
+        "name": "Поїздка триває"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Локація"
+      }
+    }
+  }
+}

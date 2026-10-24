@@ -1,0 +1,218 @@
+{
+  "entity": {
+    "sensor": {
+      "soh": {
+        "default": "mdi:battery-heart-variant"
+      },
+      "range": {
+        "default": "mdi:map-marker-distance"
+      },
+      "power": {
+        "default": "mdi:flash"
+      },
+      "kwh_charged": {
+        "default": "mdi:battery-charging-high"
+      },
+      "capacity": {
+        "default": "mdi:battery-high"
+      },
+      "hvac_setpoint": {
+        "default": "mdi:thermostat"
+      },
+      "aux_voltage": {
+        "default": "mdi:car-battery"
+      },
+      "cell_max_v": {
+        "default": "mdi:battery-arrow-up"
+      },
+      "cell_min_v": {
+        "default": "mdi:battery-arrow-down"
+      },
+      "motor_rpm": {
+        "default": "mdi:engine"
+      },
+      "vehicle_state": {
+        "default": "mdi:car-info"
+      },
+      "fan_speed": {
+        "default": "mdi:fan"
+      },
+      "odometer": {
+        "default": "mdi:counter"
+      },
+      "last_trip": {
+        "default": "mdi:map-marker-path"
+      },
+      "sunroof_pos": {
+        "default": "mdi:car-select"
+      },
+      "last_update": {
+        "default": "mdi:update"
+      },
+      "charging_gun": {
+        "default": "mdi:ev-plug-type2",
+        "state": {
+          "disconnected": "mdi:power-plug-off",
+          "dc": "mdi:ev-plug-ccs2"
+        }
+      },
+      "climate": {
+        "default": "mdi:air-conditioner",
+        "state": {
+          "off": "mdi:fan-off"
+        }
+      },
+      "seat_heat": {
+        "default": "mdi:car-seat-heater",
+        "state": {
+          "off": "mdi:car-seat"
+        }
+      },
+      "steering_heat": {
+        "default": "mdi:steering",
+        "state": {
+          "off": "mdi:steering-off"
+        }
+      },
+      "hood": {
+        "default": "mdi:car",
+        "state": {
+          "open": "mdi:car-door"
+        }
+      },
+      "trunk": {
+        "default": "mdi:car-back",
+        "state": {
+          "open": "mdi:car-back"
+        }
+      },
+      "sunroof": {
+        "default": "mdi:car-select"
+      },
+      "sunshade": {
+        "default": "mdi:roller-shade",
+        "state": {
+          "closed": "mdi:roller-shade-closed"
+        }
+      },
+      "tyre_pressure_fl": {
+        "default": "mdi:car-tire-alert"
+      },
+      "tyre_temp_fl": {
+        "default": "mdi:thermometer"
+      },
+      "tyre_state_fl": {
+        "default": "mdi:car-tire-alert",
+        "state": {
+          "normal": "mdi:tire"
+        }
+      },
+      "lock_fl": {
+        "default": "mdi:car-door-lock",
+        "state": {
+          "unlocked": "mdi:car-door-lock-open"
+        }
+      },
+      "door_fl": {
+        "default": "mdi:car-door"
+      },
+      "window_fl": {
+        "default": "mdi:window-closed-variant"
+      },
+      "tyre_pressure_fr": {
+        "default": "mdi:car-tire-alert"
+      },
+      "tyre_temp_fr": {
+        "default": "mdi:thermometer"
+      },
+      "tyre_state_fr": {
+        "default": "mdi:car-tire-alert",
+        "state": {
+          "normal": "mdi:tire"
+        }
+      },
+      "lock_fr": {
+        "default": "mdi:car-door-lock",
+        "state": {
+          "unlocked": "mdi:car-door-lock-open"
+        }
+      },
+      "door_fr": {
+        "default": "mdi:car-door"
+      },
+      "window_fr": {
+        "default": "mdi:window-closed-variant"
+      },
+      "tyre_pressure_rl": {
+        "default": "mdi:car-tire-alert"
+      },
+      "tyre_temp_rl": {
+        "default": "mdi:thermometer"
+      },
+      "tyre_state_rl": {
+        "default": "mdi:car-tire-alert",
+        "state": {
+          "normal": "mdi:tire"
+        }
+      },
+      "lock_rl": {
+        "default": "mdi:car-door-lock",
+        "state": {
+          "unlocked": "mdi:car-door-lock-open"
+        }
+      },
+      "door_rl": {
+        "default": "mdi:car-door"
+      },
+      "window_rl": {
+        "default": "mdi:window-closed-variant"
+      },
+      "tyre_pressure_rr": {
+        "default": "mdi:car-tire-alert"
+      },
+      "tyre_temp_rr": {
+        "default": "mdi:thermometer"
+      },
+      "tyre_state_rr": {
+        "default": "mdi:car-tire-alert",
+        "state": {
+          "normal": "mdi:tire"
+        }
+      },
+      "lock_rr": {
+        "default": "mdi:car-door-lock",
+        "state": {
+          "unlocked": "mdi:car-door-lock-open"
+        }
+      },
+      "door_rr": {
+        "default": "mdi:car-door"
+      },
+      "window_rr": {
+        "default": "mdi:window-closed-variant"
+      }
+    },
+    "binary_sensor": {
+      "is_dcfc": {
+        "default": "mdi:ev-station",
+        "state": {
+          "on": "mdi:lightning-bolt"
+        }
+      },
+      "is_parked": {
+        "default": "mdi:parking",
+        "state": {
+          "off": "mdi:car-arrow-right"
+        }
+      },
+      "trip_in_progress": {
+        "default": "mdi:map-marker-path"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "default": "mdi:car-electric"
+      }
+    }
+  }
+}

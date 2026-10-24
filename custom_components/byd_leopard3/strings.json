@@ -1,0 +1,368 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BYD Leopard 3",
+        "description": "Connect a car that sends telemetry to a Home Assistant webhook: BYDMate, BYD EV Pro, or any app that can POST JSON.",
+        "data": {
+          "name": "Name",
+          "model": "Model",
+          "source": "Data source",
+          "field_map": "Field map (JSON, only for custom sources)"
+        },
+        "data_description": {
+          "field_map": "Example: {\"soc\": \"battery.level\", \"speed\": {\"path\": \"spd\", \"scale\": 3.6}}"
+        }
+      },
+      "webhook": {
+        "title": "Webhook URL",
+        "description": "Paste this URL into your app (in BYDMate: Settings → Home Assistant → Webhook URL). The car appears as soon as the first packet arrives.\n\n`{webhook_url}`"
+      }
+    },
+    "error": {
+      "invalid_json": "The field map is not a valid JSON object."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BYD Leopard 3",
+        "description": "Webhook URL: `{webhook_url}`",
+        "data": {
+          "model": "Model",
+          "source": "Data source",
+          "capacity": "Battery capacity override",
+          "offline_after": "Offline after",
+          "record_trips": "Record trips",
+          "webhook_secret": "HMAC secret (optional)",
+          "field_map": "Field map (JSON)"
+        },
+        "data_description": {
+          "webhook_secret": "If set, requests must carry X-Webhook-Signature = HMAC-SHA256(body).",
+          "capacity": "Leave empty to use the model's capacity."
+        }
+      }
+    },
+    "error": {
+      "invalid_json": "The field map is not a valid JSON object."
+    }
+  },
+  "selector": {
+    "model": {
+      "options": {
+        "leopard3": "Leopard 3 / Tai 3",
+        "seal": "Seal",
+        "seal_u": "Seal U / Song Plus",
+        "atto3": "Atto 3 / Yuan Plus",
+        "dolphin": "Dolphin",
+        "han": "Han",
+        "tang": "Tang",
+        "other": "Other BYD"
+      }
+    },
+    "source": {
+      "options": {
+        "auto": "Detect automatically",
+        "abrp": "BYDMate / ABRP (Iternio) telemetry",
+        "byd_ev_pro": "BYD EV Pro",
+        "generic": "Generic JSON (this integration's key names)",
+        "custom": "Custom JSON with a field map"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "Battery level"
+      },
+      "soh": {
+        "name": "Battery health"
+      },
+      "range": {
+        "name": "Range"
+      },
+      "power": {
+        "name": "Battery power"
+      },
+      "voltage": {
+        "name": "Battery voltage"
+      },
+      "current": {
+        "name": "Battery current"
+      },
+      "batt_temp": {
+        "name": "Battery temperature"
+      },
+      "batt_temp_min": {
+        "name": "Battery min temperature"
+      },
+      "batt_temp_max": {
+        "name": "Battery max temperature"
+      },
+      "capacity": {
+        "name": "Battery capacity"
+      },
+      "kwh_charged": {
+        "name": "Charged this session"
+      },
+      "speed": {
+        "name": "Speed"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "cabin_temp": {
+        "name": "Cabin temperature"
+      },
+      "ext_temp": {
+        "name": "Outside temperature"
+      },
+      "hvac_setpoint": {
+        "name": "Climate setpoint"
+      },
+      "aux_voltage": {
+        "name": "12V battery"
+      },
+      "cell_max_v": {
+        "name": "Cell max voltage"
+      },
+      "cell_min_v": {
+        "name": "Cell min voltage"
+      },
+      "front_motor_temp": {
+        "name": "Front motor temperature"
+      },
+      "rear_motor_temp": {
+        "name": "Rear motor temperature"
+      },
+      "motor_rpm": {
+        "name": "Front motor speed"
+      },
+      "sunroof_pos": {
+        "name": "Sunroof position"
+      },
+      "vehicle_state": {
+        "name": "Vehicle state"
+      },
+      "fan_speed": {
+        "name": "Fan speed"
+      },
+      "last_update": {
+        "name": "Last update"
+      },
+      "last_trip": {
+        "name": "Last trip"
+      },
+      "tyre_pressure_fl": {
+        "name": "Tyre pressure front left"
+      },
+      "tyre_temp_fl": {
+        "name": "Tyre temperature front left"
+      },
+      "window_fl": {
+        "name": "Window front left"
+      },
+      "tyre_pressure_fr": {
+        "name": "Tyre pressure front right"
+      },
+      "tyre_temp_fr": {
+        "name": "Tyre temperature front right"
+      },
+      "window_fr": {
+        "name": "Window front right"
+      },
+      "tyre_pressure_rl": {
+        "name": "Tyre pressure rear left"
+      },
+      "tyre_temp_rl": {
+        "name": "Tyre temperature rear left"
+      },
+      "window_rl": {
+        "name": "Window rear left"
+      },
+      "tyre_pressure_rr": {
+        "name": "Tyre pressure rear right"
+      },
+      "tyre_temp_rr": {
+        "name": "Tyre temperature rear right"
+      },
+      "window_rr": {
+        "name": "Window rear right"
+      },
+      "charging_gun": {
+        "name": "Charging plug",
+        "state": {
+          "disconnected": "Disconnected",
+          "ac": "AC",
+          "dc": "DC"
+        }
+      },
+      "climate": {
+        "name": "Climate",
+        "state": {
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "seat_heat": {
+        "name": "Driver seat heating",
+        "state": {
+          "off": "Off",
+          "level_1": "Level 1",
+          "level_2": "Level 2"
+        }
+      },
+      "steering_heat": {
+        "name": "Steering wheel heating",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
+      },
+      "hood": {
+        "name": "Hood",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "trunk": {
+        "name": "Trunk",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "sunroof": {
+        "name": "Sunroof",
+        "state": {
+          "not_equipped": "Not equipped",
+          "closed": "Closed",
+          "open": "Open",
+          "opening": "Opening",
+          "closing": "Closing"
+        }
+      },
+      "sunshade": {
+        "name": "Sunshade",
+        "state": {
+          "not_equipped": "Not equipped",
+          "closed": "Closed",
+          "open": "Open",
+          "opening": "Opening",
+          "closing": "Closing"
+        }
+      },
+      "tyre_state_fl": {
+        "name": "Tyre status front left",
+        "state": {
+          "normal": "Normal",
+          "low": "Low",
+          "high": "High"
+        }
+      },
+      "lock_fl": {
+        "name": "Driver door lock",
+        "state": {
+          "locked": "Locked",
+          "unlocked": "Unlocked"
+        }
+      },
+      "door_fl": {
+        "name": "Driver door",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "tyre_state_fr": {
+        "name": "Tyre status front right",
+        "state": {
+          "normal": "Normal",
+          "low": "Low",
+          "high": "High"
+        }
+      },
+      "lock_fr": {
+        "name": "Passenger door lock",
+        "state": {
+          "locked": "Locked",
+          "unlocked": "Unlocked"
+        }
+      },
+      "door_fr": {
+        "name": "Passenger door",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "tyre_state_rl": {
+        "name": "Tyre status rear left",
+        "state": {
+          "normal": "Normal",
+          "low": "Low",
+          "high": "High"
+        }
+      },
+      "lock_rl": {
+        "name": "Rear left door lock",
+        "state": {
+          "locked": "Locked",
+          "unlocked": "Unlocked"
+        }
+      },
+      "door_rl": {
+        "name": "Rear left door",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      },
+      "tyre_state_rr": {
+        "name": "Tyre status rear right",
+        "state": {
+          "normal": "Normal",
+          "low": "Low",
+          "high": "High"
+        }
+      },
+      "lock_rr": {
+        "name": "Rear right door lock",
+        "state": {
+          "locked": "Locked",
+          "unlocked": "Unlocked"
+        }
+      },
+      "door_rr": {
+        "name": "Rear right door",
+        "state": {
+          "open": "Open",
+          "closed": "Closed"
+        }
+      }
+    },
+    "binary_sensor": {
+      "is_charging": {
+        "name": "Charging"
+      },
+      "is_dcfc": {
+        "name": "DC fast charging"
+      },
+      "is_parked": {
+        "name": "Parked"
+      },
+      "online": {
+        "name": "Online"
+      },
+      "trip_in_progress": {
+        "name": "Trip in progress"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Location"
+      }
+    }
+  }
+}

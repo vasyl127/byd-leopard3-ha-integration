@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd custom_components/byd_leopard3 && zip -r ../../byd_leopard3.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: byd_leopard3.zip

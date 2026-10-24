@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Harness</title>
+<style>
+  :root{--primary-background-color:#111;--ha-card-background:#1c1c1c;--secondary-background-color:#262626;--divider-color:#2e2e2e;
+    --primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b;--disabled-text-color:#6f6f6f;--primary-color:#03a9f4}
+  body{margin:0;background:var(--primary-background-color);color:var(--primary-text-color);font:14px Roboto,system-ui,sans-serif;padding:16px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
+  select,button{background:#262626;color:#e1e1e1;border:1px solid #3a3a3a;border-radius:6px;padding:6px 10px;font:inherit}
+  #wrap{max-width:1120px;margin:0 auto}
+  #wrap.narrow{max-width:390px}
+  ha-card{display:block;background:var(--ha-card-background);border:1px solid var(--divider-color);border-radius:12px}
+</style>
+</head>
+<body>
+<div class="bar">
+  <select id="sc"></select>
+  <select id="layout"><option>combo</option><option>car</option><option>trips</option></select>
+  <select id="color"><option>black</option><option>white</option><option>silver</option><option>grey</option><option>green</option><option>blue</option><option>pink</option><option>ice_blue</option><option>custom</option></select>
+  <select id="lang"><option>auto</option><option>uk</option><option>en</option></select>
+  <select id="width"><option value="">wide</option><option value="narrow">phone</option></select>
+  <label><input type="checkbox" id="wheel"> steering heat</label>
+</div>
+<div id="wrap"></div>
+<script type="module">
+customElements.define('ha-card', class extends HTMLElement {});
+const trips = await (await fetch('./trips.json')).json();
+const KEYS = ['soc','soh','range','power','voltage','current','batt_temp','batt_temp_min','batt_temp_max','capacity','kwh_charged','speed','odometer',
+  'cabin_temp','ext_temp','hvac_setpoint','aux_voltage','cell_max_v','cell_min_v','front_motor_temp','rear_motor_temp','motor_rpm',
+  'tyre_pressure_fl','tyre_pressure_fr','tyre_pressure_rl','tyre_pressure_rr','tyre_temp_fl','tyre_temp_fr','tyre_temp_rl','tyre_temp_rr',
+  'tyre_state_fl','tyre_state_fr','tyre_state_rl','tyre_state_rr','lock_fl','lock_fr','lock_rl','lock_rr','door_fl','door_fr','door_rl','door_rr',
+  'hood','trunk','window_fl','window_fr','window_rl','window_rr','charging_gun','climate','fan_speed','seat_heat','steering_heat','sunroof','sunshade',
+  'vehicle_state','last_update','last_trip'];
+const BIN = ['is_charging','is_dcfc','is_parked','online','trip_in_progress'];
+const entities = Object.fromEntries([...KEYS.map(k => [k, `sensor.leopard_3_${k}`]), ...BIN.map(k => [k, `binary_sensor.leopard_3_${k}`]), ['location', 'device_tracker.leopard_3']]);
+const base = {soc:20, soh:99, range:78, power:-7.2, voltage:500, current:-14.4, batt_temp:15, batt_temp_min:14, batt_temp_max:16, capacity:72.9, kwh_charged:1.19,
+  speed:0, odometer:8082, cabin_temp:30, ext_temp:8, hvac_setpoint:30, aux_voltage:13.6, cell_max_v:3.334, cell_min_v:3.321, front_motor_temp:12, rear_motor_temp:13, motor_rpm:0,
+  tyre_pressure_fl:2.67, tyre_pressure_fr:2.62, tyre_pressure_rl:2.6, tyre_pressure_rr:2.62, tyre_temp_fl:10, tyre_temp_fr:10, tyre_temp_rl:10, tyre_temp_rr:10,
+  tyre_state_fl:'normal', tyre_state_fr:'normal', tyre_state_rl:'normal', tyre_state_rr:'normal', lock_fl:'locked', lock_fr:'locked', lock_rl:'locked', lock_rr:'locked',
+  door_fl:'closed', door_fr:'closed', door_rl:'closed', door_rr:'closed', hood:'closed', trunk:'closed', window_fl:0, window_fr:0, window_rl:0, window_rr:0,
+  charging_gun:'ac', climate:'on', fan_speed:'2', seat_heat:'off', steering_heat:'off', sunroof:'closed', sunshade:'open', vehicle_state:'off', last_trip:12.9,
+  is_charging:'on', is_dcfc:'off', is_parked:'on', online:'on', trip_in_progress:'off', location:'home', age:12};
+const S = {
+  ac: {},
+  dc: {soc:47, range:184, power:-86.4, current:-168.8, voltage:512, batt_temp:31, batt_temp_min:29, batt_temp_max:33, kwh_charged:19.42, charging_gun:'dc', is_dcfc:'on', location:'not_home'},
+  drive: {soc:64, range:251, power:18.2, current:34.9, speed:77, is_charging:'off', is_parked:'off', trip_in_progress:'on', charging_gun:'disconnected', climate:'on', hvac_setpoint:21, cabin_temp:21.5,
+          vehicle_state:'on', motor_rpm:7290, front_motor_temp:46, rear_motor_temp:52, tyre_pressure_rl:2.11, tyre_state_rl:'low', location:'not_home', age:1},
+  park: {soc:64, range:251, power:0.3, current:0.6, is_charging:'off', charging_gun:'disconnected', climate:'off', fan_speed:'off', cabin_temp:14, lock_fl:'unlocked', trunk:'open', window_fl:15, age:22},
+  flat: {soc:9, range:35, power:0.3, current:0.6, is_charging:'off', charging_gun:'disconnected', climate:'off', aux_voltage:11.8, tyre_pressure_fr:1.35, tyre_state_fr:'low', age:15},
+  sleep: {soc:63, is_charging:'off', online:'off', age:3*3600+640},
+  lost: {soc:31, online:'off', age:7*60+30},
+  minimal: {only:['soc','speed','is_parked','is_charging','power','odometer','last_update','online','location']},
+};
+const sc = document.getElementById('sc'); sc.innerHTML = Object.keys(S).map(k => `<option>${k}</option>`).join('');
+let hass, card;
+function makeHass(){
+  const s = {...base, ...S[sc.value]};
+  const states = {};
+  for (const [k, id] of Object.entries(entities)){
+    if (s.only && !s.only.includes(k)) continue;
+    let st = k === 'last_update' ? new Date(Date.now() - s.age*1000).toISOString() : s[k];
+    if (st === undefined) continue;
+    const attrs = k === 'location' ? {latitude: 50.5016, longitude: 30.498} : {};
+    states[id] = {entity_id: id, state: String(st), attributes: attrs, last_updated: String(Date.now())};
+  }
+  states['zone.home'] = {state: '0', attributes: {friendly_name: 'Home'}};
+  const live = sc.value === 'drive' ? {...trips[2], points: trips[2].points.slice(0, 300), end: trips[2].points[299].t, live: true, id: 'live'} : null;
+  const strip = (t) => { const {points, ...r} = t; return {...r, has_route: true}; };
+  return {
+    states, language: 'uk', locale: {language: 'uk'}, themes: {darkMode: true},
+    callWS: async (m) => {
+      if (m.type.endsWith('/vehicles')) return [{entry_id: 'e1', title: 'Leopard 3', model: 'leopard3', capacity: 72.9, entities}];
+      if (m.type.endsWith('/trips')) return {trips: trips.map(strip), live: live && strip(live)};
+      if (m.type.endsWith('/trip')) return m.trip_id === 'live' ? live : trips.find(t => t.id === m.trip_id);
+    },
+  };
+}
+await import('../custom_components/byd_leopard3/www/byd-leopard3-card.js');
+function build(){
+  const wrap = document.getElementById('wrap');
+  wrap.className = document.getElementById('width').value;
+  wrap.innerHTML = '';
+  card = document.createElement('byd-leopard3-card');
+  card.setConfig({layout: document.getElementById('layout').value, color: document.getElementById('color').value, custom_color: [200, 40, 40],
+                  language: document.getElementById('lang').value, show_steering_heat: document.getElementById('wheel').checked});
+  wrap.appendChild(card);
+  card.hass = makeHass();
+}
+document.querySelectorAll('select,input').forEach(el => el.addEventListener('change', build));
+build();
+window._card = () => card;
+</script>
+</body>
+</html>
