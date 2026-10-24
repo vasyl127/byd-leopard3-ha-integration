@@ -11,7 +11,7 @@
           "field_map": "Мапа полів (JSON, лише для свого джерела)"
         },
         "data_description": {
-          "field_map": "Приклад: {\"soc\": \"battery.level\", \"speed\": {\"path\": \"spd\", \"scale\": 3.6}}"
+          "field_map": "Приклад: `{example}`. Шляхи, масштаб і заміну значень описано в README."
         }
       },
       "webhook": {

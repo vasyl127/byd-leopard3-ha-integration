@@ -11,7 +11,7 @@
           "field_map": "Field map (JSON, only for custom sources)"
         },
         "data_description": {
-          "field_map": "Example: {\"soc\": \"battery.level\", \"speed\": {\"path\": \"spd\", \"scale\": 3.6}}"
+          "field_map": "Example: `{example}`. See the README for paths, scale and value maps."
         }
       },
       "webhook": {

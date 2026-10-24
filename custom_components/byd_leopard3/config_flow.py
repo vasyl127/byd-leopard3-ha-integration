@@ -32,6 +32,9 @@ from .const import (
 )
 
 
+FIELD_MAP_EXAMPLE = '{"soc": "battery.level", "speed": {"path": "spd", "scale": 3.6}}'
+
+
 def _select(options: list[str], key: str) -> selector.SelectSelector:
     return selector.SelectSelector(selector.SelectSelectorConfig(
         options=options, translation_key=key, mode=selector.SelectSelectorMode.DROPDOWN))
@@ -67,7 +70,8 @@ class BydConfigFlow(ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_FIELD_MAP, default=""): selector.TextSelector(
                 selector.TextSelectorConfig(multiline=True)),
         })
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+        return self.async_show_form(step_id="user", data_schema=schema, errors=errors,
+                                    description_placeholders={"example": FIELD_MAP_EXAMPLE})
 
     async def async_step_webhook(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
