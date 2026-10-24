@@ -30,6 +30,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
   - charging forecast: time to the target and the clock time it finishes (DC slows down above 80%);
   - offline view hides stale values and shows when the last packet came;
   - car colour: the factory Leopard 3 / Tai 3 colours (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) or any custom colour;
+  - themes: *same as Home Assistant*, Dark, Light, Midnight, Graphite, OLED, Mineral; every colour of a theme (background, tiles, lines, text, secondary text, accent) can be changed in the editor;
   - English and Ukrainian, configured in the visual editor.
 
 ## Install
@@ -133,6 +134,9 @@ layout: combo               # car | trips | combo
 language: auto              # auto | uk | en
 color: green                # black | white | silver | green | pink | ice_blue | purple | custom
 custom_color: [233, 30, 99] # with color: custom
+theme: midnight             # ha | dark | light | midnight | graphite | oled | mineral
+theme_colors:               # optional: change any colour of the theme
+  accent: [255, 159, 28]    # also background, tiles, divider, text, secondary
 show_alerts: true
 show_seat_heat: true
 show_steering_heat: false
@@ -199,6 +203,7 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 - Записує поїздки за логікою BYDMate у локальну базу SQLite (`config/byd_leopard3.db`): усі поїздки з повними GPS-маршрутами зберігаються назавжди, телеметрія — 365 днів (змінюється в параметрах інтеграції, `0` — без обмеження). Дані переживають перезапуск і потрапляють у бекапи HA. У картці є періоди «Рік» і «Все».
 - Картка має три варіанти: авто, поїздки, комплект. Комплект на широкому екрані показує поїздки справа, а на телефоні знизу.
 - Натисни на будь-яке значення (заряд, потужність, температури, шини, замки, пробіг…), і відкриється його графік історії, як у звичайного сенсора HA.
+- Теми картки: як у Home Assistant, темна, світла, «Північ», «Графіт», OLED, Mineral. Кожен колір теми (фон, плитки, лінії, текст, акцент) можна змінити в редакторі.
 - Колір авто: заводські кольори Leopard 3 / Tai 3 (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) або будь-який свій.
 - Сповіщення: спущене чи низьке колесо, низький заряд, слабкий 12 В, гаряча батарея, розбаланс комірок, відчинені двері, багажник чи капот, незамкнені двері, відкриті вікна.
 - Коли даних немає, картка ховає застарілі значення і показує, коли прийшов останній пакет.

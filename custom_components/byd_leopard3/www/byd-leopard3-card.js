@@ -18,6 +18,22 @@ const COLORS = {
   ice_blue: '#6f9fbe',         // Ice Crystal Blue (冰晶蓝), 2025
   purple: '#67658c',           // Stardust Purple (星尘紫), flash-charge 2026
 };
+/* ---------- Card themes (every colour can be changed in the editor) ---------- */
+const THEMES = {
+  ha:       null,   // follow the Home Assistant theme
+  dark:     {background:'#1c1c1c', tiles:'#262626', divider:'#2e2e2e', text:'#e1e1e1', secondary:'#9b9b9b', accent:'#03a9f4'},
+  light:    {background:'#ffffff', tiles:'#f1f3f5', divider:'#e3e6ea', text:'#1d2125', secondary:'#5f6870', accent:'#1e63c8'},
+  midnight: {background:'#0f1726', tiles:'#18233a', divider:'#24314d', text:'#e6ecf7', secondary:'#9aa8c4', accent:'#4f8cff'},
+  graphite: {background:'#232527', tiles:'#2e3134', divider:'#3a3d41', text:'#ececec', secondary:'#a4a8ad', accent:'#ff9f1c'},
+  oled:     {background:'#000000', tiles:'#111111', divider:'#1f1f1f', text:'#f2f2f2', secondary:'#9a9a9a', accent:'#00c853'},
+  mineral:  {background:'#151c19', tiles:'#1f2925', divider:'#2b3732', text:'#e7efeb', secondary:'#9fb2a9', accent:'#6fbf8f'},
+};
+const THEME_KEYS = ['background', 'tiles', 'divider', 'text', 'secondary', 'accent'];
+const toHex = (c) => Array.isArray(c) ? '#' + c.slice(0, 3).map(x => Math.max(0, Math.min(255, Math.round(Number(x) || 0))).toString(16).padStart(2, '0')).join('') : (typeof c === 'string' ? c.trim() : null);
+const toRgb = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '').trim()); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : null; };
+const cssRgb = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ''); if (m) return m[1].split(',').slice(0, 3).map(Number); return toRgb(s); };
+const luma = (h) => { const c = toRgb(h); return c ? (0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]) / 255 : 0; };
+const mix = (a, b, w) => { const x = toRgb(a), y = toRgb(b); return x && y ? toHex(x.map((v, i) => v + (y[i] - v) * w)) : a; };
 const _painted = new Map();
 const _loadImg = (src) => new Promise((ok, bad) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = bad; i.src = src; });
 // Recolour the body of the black drawing: masked pixels take the target colour, shaded by the
@@ -150,7 +166,7 @@ const STR = (() => { const s = {
     ed_lang:'Language', ed_alerts:'Show alerts', ed_seat:'Show seat heating', ed_wheel:'Show steering wheel heating',
     ed_low_soc:'Low battery threshold, %', ed_tyre:'Minimum tyre pressure, bar', ed_target:'Charge target, %', ed_yaml:'YAML',
   },
-}; Object.assign(s.uk, {"year": "Рік", "all": "Все", "d_fl": "двері водія", "d_fr": "двері пасажира", "d_rl": "задні ліві двері", "fl": "Водій", "fr": "Пасажир", "rl": "Зад. лів.", "home": "Дім", "d": "дн", "st_driving": "їхала", "month": "30 днів", "no_vehicle": "Немає жодного авто. Додай інтеграцію BYD Leopard 3 у Налаштування → Пристрої та служби.", "lvl_level_1": "Рівень 1", "lvl_level_2": "Рівень 2", "roof_closed": "Закрито", "roof_open": "Відкрито", "roof_opening": "Відкривається", "roof_closing": "Закривається", "vs_off": "Вимкнено", "vs_on": "Увімкнено", "vs_remote_on": "Дистанційно", "vs_smart_charge": "Розумна зарядка", "vs_press_startup": "Запуск", "vs_bt_on": "Bluetooth", "vs_disinfect": "Дезінфекція", "vs_exhibition": "Виставковий", "lang_auto": "Як у Home Assistant", "col_black": "Obsidian Black (чорний)", "col_white": "Element White (білий)", "col_silver": "Starry Moon Silver (сріблясто-блакитний)", "col_green": "Mineral Green (зелений)", "col_pink": "Micro Light Pink (рожевий)", "col_ice_blue": "Ice Crystal Blue (блакитний)", "col_purple": "Stardust Purple (фіолетовий)", "col_custom": "Свій колір", "ed_entry_id": "Авто", "ed_layout": "Варіант картки", "ed_language": "Мова", "ed_color": "Колір авто", "ed_custom_color": "Свій колір", "ed_show_alerts": "Показувати сповіщення", "ed_show_seat_heat": "Показувати підігрів сидіння", "ed_show_steering_heat": "Показувати підігрів керма", "ed_show_trips_map": "Показувати карту поїздок", "ed_low_soc": "Поріг низького заряду", "ed_tyre_min": "Мінімальний тиск шин", "ed_charge_target": "Ціль заряду", "ed_advanced": "Додатково", "ed_title": "Заголовок (замість назви авто)", "ed_image_side": "Своє зображення збоку (URL)", "ed_image_top": "Своє зображення згори (URL)", "ed_map_tiles": "Свої тайли карти (URL з {z}/{x}/{y})", "edh_image_side": "Для інших моделей BYD. Перефарбування і колеса працюють лише з вбудованим Leopard 3."}); Object.assign(s.en, {"year": "Year", "all": "All", "d_fl": "driver door", "d_fr": "passenger door", "d_rl": "rear left door", "fl": "Driver", "fr": "Passenger", "rl": "Rear left", "home": "Home", "d": "d", "st_driving": "driving", "month": "30 days", "no_vehicle": "No car yet. Add the BYD Leopard 3 integration in Settings → Devices & services.", "lvl_level_1": "Level 1", "lvl_level_2": "Level 2", "roof_closed": "Closed", "roof_open": "Open", "roof_opening": "Opening", "roof_closing": "Closing", "vs_off": "Off", "vs_on": "On", "vs_remote_on": "Remote on", "vs_smart_charge": "Smart charge", "vs_press_startup": "Starting", "vs_bt_on": "Bluetooth", "vs_disinfect": "Disinfection", "vs_exhibition": "Exhibition", "lang_auto": "Same as Home Assistant", "col_black": "Obsidian Black", "col_white": "Element White", "col_silver": "Starry Moon Silver", "col_green": "Mineral Green", "col_pink": "Micro Light Pink", "col_ice_blue": "Ice Crystal Blue", "col_purple": "Stardust Purple", "col_custom": "Custom colour", "ed_entry_id": "Car", "ed_layout": "Card layout", "ed_language": "Language", "ed_color": "Car colour", "ed_custom_color": "Custom colour", "ed_show_alerts": "Show alerts", "ed_show_seat_heat": "Show seat heating", "ed_show_steering_heat": "Show steering wheel heating", "ed_show_trips_map": "Show trips map", "ed_low_soc": "Low battery threshold", "ed_tyre_min": "Minimum tyre pressure", "ed_charge_target": "Charge target", "ed_advanced": "Advanced", "ed_title": "Title (instead of the car name)", "ed_image_side": "Custom side image (URL)", "ed_image_top": "Custom top image (URL)", "ed_map_tiles": "Custom map tiles (URL with {z}/{x}/{y})", "edh_image_side": "For other BYD models. Recolouring and spinning wheels only work with the built-in Leopard 3 drawing."}); return s; })();
+}; Object.assign(s.uk, {"year": "Рік", "all": "Все", "ed_theme": "Тема картки", "ed_theme_colors": "Кольори теми", "ed_background": "Фон картки", "ed_tiles": "Плитки", "ed_divider": "Лінії", "ed_text": "Текст", "ed_secondary": "Другорядний текст", "ed_accent": "Акцент", "th_ha": "Як у Home Assistant", "th_dark": "Темна", "th_light": "Світла", "th_midnight": "Північ", "th_graphite": "Графіт", "th_oled": "OLED (чорна)", "th_mineral": "Mineral (зелена)", "d_fl": "двері водія", "d_fr": "двері пасажира", "d_rl": "задні ліві двері", "fl": "Водій", "fr": "Пасажир", "rl": "Зад. лів.", "home": "Дім", "d": "дн", "st_driving": "їхала", "month": "30 днів", "no_vehicle": "Немає жодного авто. Додай інтеграцію BYD Leopard 3 у Налаштування → Пристрої та служби.", "lvl_level_1": "Рівень 1", "lvl_level_2": "Рівень 2", "roof_closed": "Закрито", "roof_open": "Відкрито", "roof_opening": "Відкривається", "roof_closing": "Закривається", "vs_off": "Вимкнено", "vs_on": "Увімкнено", "vs_remote_on": "Дистанційно", "vs_smart_charge": "Розумна зарядка", "vs_press_startup": "Запуск", "vs_bt_on": "Bluetooth", "vs_disinfect": "Дезінфекція", "vs_exhibition": "Виставковий", "lang_auto": "Як у Home Assistant", "col_black": "Obsidian Black (чорний)", "col_white": "Element White (білий)", "col_silver": "Starry Moon Silver (сріблясто-блакитний)", "col_green": "Mineral Green (зелений)", "col_pink": "Micro Light Pink (рожевий)", "col_ice_blue": "Ice Crystal Blue (блакитний)", "col_purple": "Stardust Purple (фіолетовий)", "col_custom": "Свій колір", "ed_entry_id": "Авто", "ed_layout": "Варіант картки", "ed_language": "Мова", "ed_color": "Колір авто", "ed_custom_color": "Свій колір", "ed_show_alerts": "Показувати сповіщення", "ed_show_seat_heat": "Показувати підігрів сидіння", "ed_show_steering_heat": "Показувати підігрів керма", "ed_show_trips_map": "Показувати карту поїздок", "ed_low_soc": "Поріг низького заряду", "ed_tyre_min": "Мінімальний тиск шин", "ed_charge_target": "Ціль заряду", "ed_advanced": "Додатково", "ed_title": "Заголовок (замість назви авто)", "ed_image_side": "Своє зображення збоку (URL)", "ed_image_top": "Своє зображення згори (URL)", "ed_map_tiles": "Свої тайли карти (URL з {z}/{x}/{y})", "edh_image_side": "Для інших моделей BYD. Перефарбування і колеса працюють лише з вбудованим Leopard 3."}); Object.assign(s.en, {"year": "Year", "all": "All", "ed_theme": "Card theme", "ed_theme_colors": "Theme colours", "ed_background": "Card background", "ed_tiles": "Tiles", "ed_divider": "Lines", "ed_text": "Text", "ed_secondary": "Secondary text", "ed_accent": "Accent", "th_ha": "Same as Home Assistant", "th_dark": "Dark", "th_light": "Light", "th_midnight": "Midnight", "th_graphite": "Graphite", "th_oled": "OLED (black)", "th_mineral": "Mineral (green)", "d_fl": "driver door", "d_fr": "passenger door", "d_rl": "rear left door", "fl": "Driver", "fr": "Passenger", "rl": "Rear left", "home": "Home", "d": "d", "st_driving": "driving", "month": "30 days", "no_vehicle": "No car yet. Add the BYD Leopard 3 integration in Settings → Devices & services.", "lvl_level_1": "Level 1", "lvl_level_2": "Level 2", "roof_closed": "Closed", "roof_open": "Open", "roof_opening": "Opening", "roof_closing": "Closing", "vs_off": "Off", "vs_on": "On", "vs_remote_on": "Remote on", "vs_smart_charge": "Smart charge", "vs_press_startup": "Starting", "vs_bt_on": "Bluetooth", "vs_disinfect": "Disinfection", "vs_exhibition": "Exhibition", "lang_auto": "Same as Home Assistant", "col_black": "Obsidian Black", "col_white": "Element White", "col_silver": "Starry Moon Silver", "col_green": "Mineral Green", "col_pink": "Micro Light Pink", "col_ice_blue": "Ice Crystal Blue", "col_purple": "Stardust Purple", "col_custom": "Custom colour", "ed_entry_id": "Car", "ed_layout": "Card layout", "ed_language": "Language", "ed_color": "Car colour", "ed_custom_color": "Custom colour", "ed_show_alerts": "Show alerts", "ed_show_seat_heat": "Show seat heating", "ed_show_steering_heat": "Show steering wheel heating", "ed_show_trips_map": "Show trips map", "ed_low_soc": "Low battery threshold", "ed_tyre_min": "Minimum tyre pressure", "ed_charge_target": "Charge target", "ed_advanced": "Advanced", "ed_title": "Title (instead of the car name)", "ed_image_side": "Custom side image (URL)", "ed_image_top": "Custom top image (URL)", "ed_map_tiles": "Custom map tiles (URL with {z}/{x}/{y})", "edh_image_side": "For other BYD models. Recolouring and spinning wheels only work with the built-in Leopard 3 drawing."}); return s; })();
 const ICONS = {
   bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
   plug:'<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
@@ -214,7 +230,7 @@ const IMG_W = 949, IMG_H = 372, WHEEL_R = 66, WHEELS = [[165, 282], [738, 282]];
 const DEFAULTS = {
   layout: 'combo', language: 'auto', color: 'black', custom_color: [233, 30, 99],
   show_alerts: true, show_seat_heat: true, show_steering_heat: false, show_trips_map: true,
-  low_soc: 20, tyre_min: 2.3, charge_target: 100, trips_days: 7,
+  low_soc: 20, tyre_min: 2.3, charge_target: 100, trips_days: 7, theme: 'ha',
 };
 
 class BydLeopard3Card extends HTMLElement {
@@ -222,8 +238,13 @@ class BydLeopard3Card extends HTMLElement {
   static getStubConfig(){ return {layout: 'combo'}; }
 
   setConfig(config){
+    const prevTheme = this._themeSig;
     this._cfg = {...DEFAULTS, ...(config || {})};
     this._period ||= 1;
+    this._applyTheme();
+    if (this._map && prevTheme !== undefined && prevTheme !== this._themeSig){
+      this._map.remove(); this._map = null; this._carPin = null; this._routeLayer = null;
+    }
     // The visual editor calls setConfig on every change: repaint, relayout, refetch trips.
     if (this.shadowRoot && this._hass){
       this._applyLayout();
@@ -265,6 +286,7 @@ class BydLeopard3Card extends HTMLElement {
       </div></ha-card>`;
     this.$ = (id) => root.getElementById(id);
     this._applyLayout();
+    this._applyTheme();
     root.addEventListener('click', (e) => this._onClick(e));
     root.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset?.act){ e.preventDefault(); e.target.click(); } });
     this._tick = setInterval(() => this._render(), 15000);   // "N s ago" and offline detection
@@ -284,6 +306,31 @@ class BydLeopard3Card extends HTMLElement {
     card.classList.remove('mode-car','mode-trips','mode-combo');
     card.classList.add('mode-' + (this._cfg.layout || 'combo'));
     if (this._map) setTimeout(() => this._map.invalidateSize(), 50);
+  }
+  /* -- theme -- */
+  _palette(){
+    const base = THEMES[this._cfg.theme] || null, over = this._cfg.theme_colors || {};
+    const p = base ? {...base} : {};
+    for (const k of THEME_KEYS) if (over[k] != null){ const h = toHex(over[k]); if (h) p[k] = h; }
+    return Object.keys(p).length ? p : null;
+  }
+  _isLight(){
+    const p = this._palette();
+    if (p?.background) return luma(p.background) > 0.55;
+    return this._hass?.themes?.darkMode === false;
+  }
+  _applyTheme(){
+    const card = this.shadowRoot?.querySelector('.host'); if (!card) return;
+    const p = this._palette() || {}, light = this._isLight();
+    const set = (v, val) => val ? card.style.setProperty(v, val) : card.style.removeProperty(v);
+    set('--card', p.background); set('--ha-card-background', p.background); set('--card-background-color', p.background);
+    set('--card-2', p.tiles); set('--line', p.divider); set('--text', p.text); set('--muted', p.secondary);
+    set('--faint', p.secondary && p.background ? mix(p.secondary, p.background, 0.35) : null);
+    set('--accent', p.accent);
+    card.style.background = p.background || '';
+    card.style.color = p.text || '';
+    card.classList.toggle('light', light);
+    this._themeSig = JSON.stringify(p) + light;
   }
   _hex(){
     const c = this._cfg.color;
@@ -350,6 +397,7 @@ class BydLeopard3Card extends HTMLElement {
     const sig = Object.values(this._veh.entities).map(id => this._hass.states[id]?.last_updated).join('|') + this.lang + Math.floor(Date.now()/15000);
     if (!force && sig === this._sig) return;
     this._sig = sig;
+    if (this._cfg.theme === 'ha' || !this._cfg.theme) this._applyTheme();
     const d = this._data();
     if (this._cfg.layout !== 'trips') morph(this.$('car'), d.online === false ? this._offlineHtml(d) : this._carHtml(d));
     this._tempo(d);
@@ -605,7 +653,7 @@ class BydLeopard3Card extends HTMLElement {
     const L = await loadLeaflet().catch(() => null);
     if (!L){ this.$('map').innerHTML = `<div class="empty">${this.t('map_fail')}</div>`; return; }
     this.shadowRoot.getElementById('lcss').textContent = await leafletCss();
-    const dark = this._hass.themes?.darkMode ?? true;
+    const dark = !this._isLight();
     this._map = L.map(this.$('map'), {zoomControl: true, scrollWheelZoom: false, attributionControl: true}).setView([50.45, 30.52], 11);
     const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
     const kind = dark ? 'Dark' : 'Light';
@@ -744,6 +792,11 @@ class BydLeopard3CardEditor extends HTMLElement {
     ];
     if (this._cfg.color === 'custom') s.push({name: 'custom_color', selector: {color_rgb: {}}});
     s.push(
+      {name: 'theme', selector: {select: {mode: 'dropdown', options: opt(Object.keys(THEMES), 'th_')}}},
+      {type: 'expandable', name: 'theme_colors', title: this.t('ed_theme_colors'),
+       schema: THEME_KEYS.map(k => ({name: k, selector: {color_rgb: {}}}))},
+    );
+    s.push(
       {name: 'show_alerts', selector: {boolean: {}}},
       {name: 'show_seat_heat', selector: {boolean: {}}},
       {name: 'show_steering_heat', selector: {boolean: {}}},
@@ -767,7 +820,18 @@ class BydLeopard3CardEditor extends HTMLElement {
       this._form.computeLabel = (s) => this.t('ed_' + s.name);
       this._form.computeHelper = (s) => STR[this.lang]['edh_' + s.name] ?? STR.en['edh_' + s.name] ?? undefined;
       this._form.addEventListener('value-changed', (e) => {
-        this._cfg = e.detail.value;
+        const next = {...e.detail.value};
+        if ((next.theme || 'ha') !== (this._cfg.theme || 'ha')) delete next.theme_colors;   // a new theme starts clean
+        else {
+          // Keep only the colours that differ from the theme, so switching themes later still works.
+          const diff = {};
+          for (const k of THEME_KEYS){
+            const v = toHex(next.theme_colors?.[k]);
+            if (v && v !== this._base?.[k]) diff[k] = toRgb(v);
+          }
+          if (Object.keys(diff).length) next.theme_colors = diff; else delete next.theme_colors;
+        }
+        this._cfg = next;
         this.dispatchEvent(new CustomEvent('config-changed', {detail: {config: this._cfg}, bubbles: true, composed: true}));
         this._draw();
       });
@@ -775,7 +839,18 @@ class BydLeopard3CardEditor extends HTMLElement {
     }
     this._form.hass = this._hass;
     this._form.schema = this._schema();
-    this._form.data = {...DEFAULTS, ...this._cfg};
+    this._base = this._baseColors();
+    const colors = {};
+    for (const k of THEME_KEYS){ const v = toHex(this._cfg.theme_colors?.[k]) || this._base[k]; if (v) colors[k] = toRgb(v); }
+    this._form.data = {...DEFAULTS, ...this._cfg, theme_colors: colors};
+  }
+  _baseColors(){
+    const preset = THEMES[this._cfg.theme || 'ha'];
+    if (preset) return {...preset};
+    // "Same as Home Assistant": show the colours of the active HA theme.
+    const cs = getComputedStyle(this), v = (...names) => { for (const n of names){ const x = cs.getPropertyValue(n).trim(); if (x) return toHex(cssRgb(x)) || null; } return null; };
+    return {background: v('--ha-card-background', '--card-background-color'), tiles: v('--secondary-background-color'),
+            divider: v('--divider-color'), text: v('--primary-text-color'), secondary: v('--secondary-text-color'), accent: v('--primary-color')};
   }
 }
 
@@ -870,7 +945,7 @@ ha-card{display:block;overflow:hidden;color:var(--text);font-size:14px;line-heig
 .soc-big small{font-size:16px;color:var(--muted);font-weight:400;margin-left:2px}
 .range{color:var(--muted);text-align:right}
 .range b{color:var(--text);font-size:18px;font-weight:500}
-.bar{position:relative;height:12px;border-radius:6px;background:#333;overflow:hidden;margin:8px 0 6px}
+.bar{position:relative;height:12px;border-radius:6px;background:var(--track,#333);overflow:hidden;margin:8px 0 6px}
 .bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:var(--ok);transition:width .5s}
 .bar i.low{background:var(--warn)}
 .bar i.crit{background:var(--err)}
@@ -1000,6 +1075,27 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .odo[data-act=more]:hover,.status[data-act=more]:hover,.soc-big[data-act=more]:hover,.range[data-act=more]:hover,.foot[data-act=more]:hover span:first-child,.energy [data-act=more]:hover,.chg [data-act=more]:hover{color:var(--accent)}
 [data-act=more]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
+/* Light themes */
+.host.light{--track:#e3e6ea}
+.host.light .chip.ok{color:#2e7d32}.host.light .chip.dc{color:#7b1fa2}.host.light .chip.info{color:#0277bd}
+.host.light .chip.warn{color:#a15c00}.host.light .chip.park{color:#1e4fa0}
+.host.light .alert.err{color:#c62828}.host.light .alert.warn{color:#9a5700}.host.light .alert.info{color:#0277bd}
+.host.light .neg,.host.light .c-good{color:#2e7d32}.host.light .pos,.host.light .c-bad{color:#c26100}.host.light .c-mid{color:#8a6d00}
+.host.light .trow:hover{background:rgba(0,0,0,.04)}
+.host.light .trow .live{color:#0277bd}
+.host.light .carwrap img{filter:drop-shadow(0 12px 10px rgba(0,0,0,.28))}
+.host.light .topcar img{filter:none}
+.host.light .topcar .lbl{background:rgba(255,255,255,.88);color:var(--muted);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.host.light .topcar .lbl.open{background:#fff3e0;color:#9a5700}
+.host.light .offline-box .ico{background:rgba(0,0,0,.05)}
+.host.light .offline-box.alert .ico{color:#c62828}
+.host.light .foot.offline{color:#c62828}
+.host.light .road{background:repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 34px,transparent 34px 78px);background-size:78px 3px}
+.host.light .chg .eta{border-top-color:rgba(0,0,0,.08)}
+.host.light #map,.host.light .leaflet-container{background:#e9ecef}
+.host.light .leaflet-bar a{background:#fff!important;color:#333!important;border-color:#d6d9dd!important}
+.host.light .leaflet-control-attribution{background:rgba(255,255,255,.75)!important;color:#555!important}
+.host.light .leaflet-control-attribution a{color:#333!important}
 /* Card editor */
 `;
 

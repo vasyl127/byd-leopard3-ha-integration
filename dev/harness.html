@@ -20,6 +20,7 @@
   <select id="sc"></select>
   <select id="layout"><option>combo</option><option>car</option><option>trips</option></select>
   <select id="color"><option>black</option><option>white</option><option>silver</option><option>green</option><option>pink</option><option>ice_blue</option><option>purple</option><option>custom</option></select>
+  <select id="theme"><option>ha</option><option>dark</option><option>light</option><option>midnight</option><option>graphite</option><option>oled</option><option>mineral</option></select>
   <select id="lang"><option>auto</option><option>uk</option><option>en</option></select>
   <select id="width"><option value="">wide</option><option value="narrow">phone</option></select>
   <label><input type="checkbox" id="wheel"> steering heat</label>
@@ -85,13 +86,14 @@ function build(){
   wrap.innerHTML = '';
   card = document.createElement('byd-leopard3-card');
   card.setConfig({layout: document.getElementById('layout').value, color: document.getElementById('color').value, custom_color: [200, 40, 40],
-                  language: document.getElementById('lang').value, show_steering_heat: document.getElementById('wheel').checked});
+                  language: document.getElementById('lang').value, theme: document.getElementById('theme').value, show_steering_heat: document.getElementById('wheel').checked});
   wrap.appendChild(card);
   card.hass = makeHass();
 }
 document.querySelectorAll('select,input').forEach(el => el.addEventListener('change', build));
 build();
 window._card = () => card;
+document.addEventListener('hass-more-info', (e) => { window._lastMore = e.detail.entityId; console.log('more-info', e.detail.entityId); });
 </script>
 </body>
 </html>
