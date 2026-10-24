@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -274,7 +274,9 @@ class BydLeopard3Card extends HTMLElement {
     }
   }
   getCardSize(){ return this._cfg?.layout === 'trips' ? 9 : 12; }
-  getGridOptions(){ return {columns: 12, min_columns: 6, rows: 'auto'}; }
+  // Full width of the section by default: in a wide section (sections view, column span 2+) the combined
+  // layout then puts the trips next to the car instead of under it.
+  getGridOptions(){ return {columns: 'full', min_columns: 6, rows: 'auto'}; }
 
   set hass(hass){
     const first = !this._hass;
@@ -662,7 +664,13 @@ class BydLeopard3Card extends HTMLElement {
       this._trips = await this._hass.callWS({type: `${DOMAIN}/trips`, entry_id: this._veh.entry_id, days: Math.max(this._period, this._cfg.trips_days)});
     } catch (e) { this._trips = {trips: [], live: null}; }
     if (!this._sel || (this._sel === 'live' && !this._trips.live)) this._sel = this._trips.live ? 'live' : this._trips.trips.at(-1)?.id || null;
-    await this._loadRoute(this._sel, true);
+    if (this._sel) await this._loadRoute(this._sel, true);
+    else {
+      // No trips yet: still show the map, centred on the car when its position is known.
+      await this._ensureMap();
+      const d = this._data();
+      if (this._map && d.lat != null){ this._map.setView([d.lat, d.lon], 14); this._moveCar(d.lat, d.lon, false); }
+    }
     this._renderTrips();
     // While a trip is open, poll for its growing route.
     this._tripTimer = setTimeout(() => this._refreshTrips(), this._trips.live ? 5000 : 300000);

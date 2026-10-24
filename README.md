@@ -82,6 +82,8 @@ Copy `custom_components/byd_leopard3` into your `config/custom_components/` and 
 
 Then add the card: Dashboard → Edit → Add card → **BYD Leopard 3**. Everything is set in the visual editor.
 
+> **Trips next to the car.** The *combined* layout puts the trips beside the car once the card is at least 860 px wide, and under it when it is narrower. In a *sections* dashboard a section is one column (~500 px) by default, so open the section settings and set its width to the full row (or use a *panel* view). The card itself already takes the full width of its section.
+
 > The webhook URL is a secret. If Home Assistant is reachable from the internet, anyone with the URL can post data. To lock it down, set a **webhook secret** in the integration options and the same value in your app. Requests are accepted with `Authorization: Bearer <secret>` (the *Secret* field in BYDMate) or with an HMAC signature (`X-Webhook-Signature: hex(HMAC-SHA256(secret, body))`). Anything else gets `403`.
 
 ## Data formats
@@ -231,3 +233,5 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 - Коли даних немає, картка ховає застарілі значення і показує, коли прийшов останній пакет.
 
 Не є офіційним продуктом BYD чи Fangchengbao.
+
+Щоб поїздки стояли праворуч від авто, картка має бути завширшки щонайменше 860 px. На дашборді типу «Секції» секція за замовчуванням вузька (~500 px), тож у налаштуваннях секції постав ширину на весь рядок або використай вигляд «Панель».
