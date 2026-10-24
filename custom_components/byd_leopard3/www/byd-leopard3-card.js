@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.1.1';
+const VERSION = '1.2.0';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -31,6 +31,15 @@ const THEMES = {
   graphite: {background:'#232527', tiles:'#2e3134', divider:'#3a3d41', text:'#ececec', secondary:'#a4a8ad', accent:'#ff9f1c'},
   oled:     {background:'#000000', tiles:'#111111', divider:'#1f1f1f', text:'#f2f2f2', secondary:'#9a9a9a', accent:'#00c853'},
   mineral:  {background:'#151c19', tiles:'#1f2925', divider:'#2b3732', text:'#e7efeb', secondary:'#9fb2a9', accent:'#6fbf8f'},
+  // Styled themes: own fonts, borders and effects (CSS below, `.host[data-theme=…]`).
+  claude:   {background:'#262624', tiles:'#262624', divider:'#45423e', text:'#ebe8e4', secondary:'#a8a29b', accent:'#d97757', faint:'#7a756e', ok:'#8fbf6a', warn:'#e5b45a', err:'#e5735f', park:'#d97757', radius:'0', fonts:'family=JetBrains+Mono:wght@400;500;600'},
+  tesla:    {background:'#000000', tiles:'transparent', divider:'#1f1f1f', text:'#f2f2f2', secondary:'#8e8e8e', accent:'#3e6ae1', faint:'#5c5c5c', ok:'#3e6ae1', warn:'#e8a33d', err:'#e82127', park:'#3e6ae1', radius:'6px', fonts:'family=Inter:wght@200;300;400;500'},
+  gradient: {background:'rgba(255,255,255,.12)', tiles:'rgba(255,255,255,.10)', divider:'rgba(255,255,255,.22)', text:'#ffffff', secondary:'rgba(255,255,255,.78)', accent:'#ffffff', faint:'rgba(255,255,255,.6)', ok:'#7cffb2', warn:'#ffd36e', err:'#ff7a90', park:'#4f7cff', radius:'26px', fonts:'family=Plus+Jakarta+Sans:wght@400;600;700;800'},
+  neon:     {background:'#0d0420', tiles:'#120830', divider:'#3a1466', text:'#f6ecff', secondary:'#b9a2dd', accent:'#00f0ff', faint:'#7d68a3', ok:'#39ff88', warn:'#ffd400', err:'#ff3d7f', park:'#ff2bd6', radius:'4px', fonts:'family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700'},
+  paper:    {background:'#fbf8f1', tiles:'transparent', divider:'#d7cdb9', text:'#1c1915', secondary:'#6b6254', accent:'#b4532a', faint:'#958b7a', ok:'#2e7d32', warn:'#bf5b00', err:'#b71c1c', park:'#1c1915', radius:'2px', fonts:'family=Inter:wght@400;500;600;700&family=Fraunces:ital,wght@0,500;0,600;1,600'},
+  offroad:  {background:'#262920', tiles:'#30342a', divider:'#454a3a', text:'#ece5cf', secondary:'#b6ad91', accent:'#e2a33b', faint:'#878067', ok:'#9ccc65', warn:'#e2a33b', err:'#ef5b3b', park:'#e2a33b', radius:'3px', fonts:'family=Saira:wght@400;500;600&family=Saira+Stencil+One'},
+  ios:      {background:'#ffffff', tiles:'#f2f2f7', divider:'#e5e5ea', text:'#000000', secondary:'#8e8e93', accent:'#007aff', faint:'#aeaeb2', ok:'#34c759', warn:'#ff9500', err:'#ff3b30', park:'#007aff', radius:'22px', fonts:'family=Inter:wght@400;500;600;700'},
+  ios_dark: {background:'#1c1c1e', tiles:'#2c2c2e', divider:'#38383a', text:'#ffffff', secondary:'#8e8e93', accent:'#0a84ff', faint:'#636366', ok:'#30d158', warn:'#ff9f0a', err:'#ff453a', park:'#0a84ff', radius:'22px', fonts:'family=Inter:wght@400;500;600;700'},
 };
 const THEME_KEYS = ['background', 'tiles', 'divider', 'text', 'secondary', 'accent'];
 const toHex = (c) => Array.isArray(c) ? '#' + c.slice(0, 3).map(x => Math.max(0, Math.min(255, Math.round(Number(x) || 0))).toString(16).padStart(2, '0')).join('') : (typeof c === 'string' ? c.trim() : null);
@@ -38,6 +47,14 @@ const toRgb = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '').trim(
 const cssRgb = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ''); if (m) return m[1].split(',').slice(0, 3).map(Number); return toRgb(s); };
 const luma = (h) => { const c = toRgb(h); return c ? (0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]) / 255 : 0; };
 const mix = (a, b, w) => { const x = toRgb(a), y = toRgb(b); return x && y ? toHex(x.map((v, i) => v + (y[i] - v) * w)) : a; };
+// Styled themes use web fonts; load them once into the page (shadow DOM uses document fonts).
+const _fonts = new Set();
+function loadFonts(spec){
+  if (_fonts.has(spec)) return; _fonts.add(spec);
+  const l = document.createElement('link');
+  l.rel = 'stylesheet'; l.href = `https://fonts.googleapis.com/css2?${spec}&display=swap`;
+  document.head.appendChild(l);
+}
 const _painted = new Map();
 const _loadImg = (src) => new Promise((ok, bad) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = bad; i.src = src; });
 // Recolour the body of the black drawing: masked pixels take the target colour, shaded by the
@@ -170,7 +187,7 @@ const STR = (() => { const s = {
     ed_lang:'Language', ed_alerts:'Show alerts', ed_seat:'Show seat heating', ed_wheel:'Show steering wheel heating',
     ed_low_soc:'Low battery threshold, %', ed_tyre:'Minimum tyre pressure, bar', ed_target:'Charge target, %', ed_yaml:'YAML',
   },
-}; Object.assign(s.uk, {"year": "Рік", "all": "Все", "ed_theme": "Тема картки", "ed_theme_colors": "Кольори теми", "ed_background": "Фон картки", "ed_tiles": "Плитки", "ed_divider": "Лінії", "ed_text": "Текст", "ed_secondary": "Другорядний текст", "ed_accent": "Акцент", "th_ha": "Як у Home Assistant", "th_dark": "Темна", "th_light": "Світла", "th_midnight": "Північ", "th_graphite": "Графіт", "th_oled": "OLED (чорна)", "th_mineral": "Mineral (зелена)", "d_fl": "двері водія", "d_fr": "двері пасажира", "d_rl": "задні ліві двері", "fl": "Водій", "fr": "Пасажир", "rl": "Зад. лів.", "home": "Дім", "d": "дн", "st_driving": "їхала", "month": "30 днів", "no_vehicle": "Немає жодного авто. Додай інтеграцію BYD Leopard 3 у Налаштування → Пристрої та служби.", "lvl_level_1": "Рівень 1", "lvl_level_2": "Рівень 2", "roof_closed": "Закрито", "roof_open": "Відкрито", "roof_opening": "Відкривається", "roof_closing": "Закривається", "vs_off": "Вимкнено", "vs_on": "Увімкнено", "vs_remote_on": "Дистанційно", "vs_smart_charge": "Розумна зарядка", "vs_press_startup": "Запуск", "vs_bt_on": "Bluetooth", "vs_disinfect": "Дезінфекція", "vs_exhibition": "Виставковий", "lang_auto": "Як у Home Assistant", "col_black": "Obsidian Black (чорний)", "col_white": "Element White (білий)", "col_silver": "Starry Moon Silver (сріблясто-блакитний)", "col_green": "Mineral Green (зелений)", "col_pink": "Micro Light Pink (рожевий)", "col_ice_blue": "Ice Crystal Blue (блакитний)", "col_purple": "Stardust Purple (фіолетовий)", "col_custom": "Свій колір", "ed_entry_id": "Авто", "ed_layout": "Варіант картки", "ed_language": "Мова", "ed_color": "Колір авто", "ed_custom_color": "Свій колір", "ed_show_alerts": "Показувати сповіщення", "ed_show_seat_heat": "Показувати підігрів сидіння", "ed_show_steering_heat": "Показувати підігрів керма", "ed_show_trips_map": "Показувати карту поїздок", "ed_low_soc": "Поріг низького заряду", "ed_tyre_min": "Мінімальний тиск шин", "ed_charge_target": "Ціль заряду", "ed_advanced": "Додатково", "ed_title": "Заголовок (замість назви авто)", "ed_image_side": "Своє зображення збоку (URL)", "ed_image_top": "Своє зображення згори (URL)", "ed_map_tiles": "Свої тайли карти (URL з {z}/{x}/{y})", "edh_image_side": "Для інших моделей BYD. Перефарбування і колеса працюють лише з вбудованим Leopard 3."}); Object.assign(s.en, {"year": "Year", "all": "All", "ed_theme": "Card theme", "ed_theme_colors": "Theme colours", "ed_background": "Card background", "ed_tiles": "Tiles", "ed_divider": "Lines", "ed_text": "Text", "ed_secondary": "Secondary text", "ed_accent": "Accent", "th_ha": "Same as Home Assistant", "th_dark": "Dark", "th_light": "Light", "th_midnight": "Midnight", "th_graphite": "Graphite", "th_oled": "OLED (black)", "th_mineral": "Mineral (green)", "d_fl": "driver door", "d_fr": "passenger door", "d_rl": "rear left door", "fl": "Driver", "fr": "Passenger", "rl": "Rear left", "home": "Home", "d": "d", "st_driving": "driving", "month": "30 days", "no_vehicle": "No car yet. Add the BYD Leopard 3 integration in Settings → Devices & services.", "lvl_level_1": "Level 1", "lvl_level_2": "Level 2", "roof_closed": "Closed", "roof_open": "Open", "roof_opening": "Opening", "roof_closing": "Closing", "vs_off": "Off", "vs_on": "On", "vs_remote_on": "Remote on", "vs_smart_charge": "Smart charge", "vs_press_startup": "Starting", "vs_bt_on": "Bluetooth", "vs_disinfect": "Disinfection", "vs_exhibition": "Exhibition", "lang_auto": "Same as Home Assistant", "col_black": "Obsidian Black", "col_white": "Element White", "col_silver": "Starry Moon Silver", "col_green": "Mineral Green", "col_pink": "Micro Light Pink", "col_ice_blue": "Ice Crystal Blue", "col_purple": "Stardust Purple", "col_custom": "Custom colour", "ed_entry_id": "Car", "ed_layout": "Card layout", "ed_language": "Language", "ed_color": "Car colour", "ed_custom_color": "Custom colour", "ed_show_alerts": "Show alerts", "ed_show_seat_heat": "Show seat heating", "ed_show_steering_heat": "Show steering wheel heating", "ed_show_trips_map": "Show trips map", "ed_low_soc": "Low battery threshold", "ed_tyre_min": "Minimum tyre pressure", "ed_charge_target": "Charge target", "ed_advanced": "Advanced", "ed_title": "Title (instead of the car name)", "ed_image_side": "Custom side image (URL)", "ed_image_top": "Custom top image (URL)", "ed_map_tiles": "Custom map tiles (URL with {z}/{x}/{y})", "edh_image_side": "For other BYD models. Recolouring and spinning wheels only work with the built-in Leopard 3 drawing."}); return s; })();
+}; Object.assign(s.uk, {"year": "Рік", "all": "Все", "ed_theme": "Тема картки", "ed_theme_colors": "Кольори теми", "ed_background": "Фон картки", "ed_tiles": "Плитки", "ed_divider": "Лінії", "ed_text": "Текст", "ed_secondary": "Другорядний текст", "ed_accent": "Акцент", "th_ha": "Як у Home Assistant", "th_dark": "Темна", "th_light": "Світла", "th_midnight": "Північ", "th_graphite": "Графіт", "th_oled": "OLED (чорна)", "th_mineral": "Mineral (зелена)", "th_claude": "Claude CLI (термінал)", "th_tesla": "Tesla", "th_gradient": "Градієнтне скло", "th_neon": "Неон", "th_paper": "Папір", "th_offroad": "Off-road (позашляховик)", "th_ios": "iOS", "th_ios_dark": "iOS темна", "d_fl": "двері водія", "d_fr": "двері пасажира", "d_rl": "задні ліві двері", "fl": "Водій", "fr": "Пасажир", "rl": "Зад. лів.", "home": "Дім", "d": "дн", "st_driving": "їхала", "month": "30 днів", "no_vehicle": "Немає жодного авто. Додай інтеграцію BYD Leopard 3 у Налаштування → Пристрої та служби.", "lvl_level_1": "Рівень 1", "lvl_level_2": "Рівень 2", "roof_closed": "Закрито", "roof_open": "Відкрито", "roof_opening": "Відкривається", "roof_closing": "Закривається", "vs_off": "Вимкнено", "vs_on": "Увімкнено", "vs_remote_on": "Дистанційно", "vs_smart_charge": "Розумна зарядка", "vs_press_startup": "Запуск", "vs_bt_on": "Bluetooth", "vs_disinfect": "Дезінфекція", "vs_exhibition": "Виставковий", "lang_auto": "Як у Home Assistant", "col_black": "Obsidian Black (чорний)", "col_white": "Element White (білий)", "col_silver": "Starry Moon Silver (сріблясто-блакитний)", "col_green": "Mineral Green (зелений)", "col_pink": "Micro Light Pink (рожевий)", "col_ice_blue": "Ice Crystal Blue (блакитний)", "col_purple": "Stardust Purple (фіолетовий)", "col_custom": "Свій колір", "ed_entry_id": "Авто", "ed_layout": "Варіант картки", "ed_language": "Мова", "ed_color": "Колір авто", "ed_custom_color": "Свій колір", "ed_show_alerts": "Показувати сповіщення", "ed_show_seat_heat": "Показувати підігрів сидіння", "ed_show_steering_heat": "Показувати підігрів керма", "ed_show_trips_map": "Показувати карту поїздок", "ed_low_soc": "Поріг низького заряду", "ed_tyre_min": "Мінімальний тиск шин", "ed_charge_target": "Ціль заряду", "ed_advanced": "Додатково", "ed_title": "Заголовок (замість назви авто)", "ed_image_side": "Своє зображення збоку (URL)", "ed_image_top": "Своє зображення згори (URL)", "ed_map_tiles": "Свої тайли карти (URL з {z}/{x}/{y})", "edh_image_side": "Для інших моделей BYD. Перефарбування і колеса працюють лише з вбудованим Leopard 3."}); Object.assign(s.en, {"year": "Year", "all": "All", "ed_theme": "Card theme", "ed_theme_colors": "Theme colours", "ed_background": "Card background", "ed_tiles": "Tiles", "ed_divider": "Lines", "ed_text": "Text", "ed_secondary": "Secondary text", "ed_accent": "Accent", "th_ha": "Same as Home Assistant", "th_dark": "Dark", "th_light": "Light", "th_midnight": "Midnight", "th_graphite": "Graphite", "th_oled": "OLED (black)", "th_mineral": "Mineral (green)", "th_claude": "Claude CLI (terminal)", "th_tesla": "Tesla", "th_gradient": "Gradient Glass", "th_neon": "Neon", "th_paper": "Paper", "th_offroad": "Off-road", "th_ios": "iOS", "th_ios_dark": "iOS Dark", "d_fl": "driver door", "d_fr": "passenger door", "d_rl": "rear left door", "fl": "Driver", "fr": "Passenger", "rl": "Rear left", "home": "Home", "d": "d", "st_driving": "driving", "month": "30 days", "no_vehicle": "No car yet. Add the BYD Leopard 3 integration in Settings → Devices & services.", "lvl_level_1": "Level 1", "lvl_level_2": "Level 2", "roof_closed": "Closed", "roof_open": "Open", "roof_opening": "Opening", "roof_closing": "Closing", "vs_off": "Off", "vs_on": "On", "vs_remote_on": "Remote on", "vs_smart_charge": "Smart charge", "vs_press_startup": "Starting", "vs_bt_on": "Bluetooth", "vs_disinfect": "Disinfection", "vs_exhibition": "Exhibition", "lang_auto": "Same as Home Assistant", "col_black": "Obsidian Black", "col_white": "Element White", "col_silver": "Starry Moon Silver", "col_green": "Mineral Green", "col_pink": "Micro Light Pink", "col_ice_blue": "Ice Crystal Blue", "col_purple": "Stardust Purple", "col_custom": "Custom colour", "ed_entry_id": "Car", "ed_layout": "Card layout", "ed_language": "Language", "ed_color": "Car colour", "ed_custom_color": "Custom colour", "ed_show_alerts": "Show alerts", "ed_show_seat_heat": "Show seat heating", "ed_show_steering_heat": "Show steering wheel heating", "ed_show_trips_map": "Show trips map", "ed_low_soc": "Low battery threshold", "ed_tyre_min": "Minimum tyre pressure", "ed_charge_target": "Charge target", "ed_advanced": "Advanced", "ed_title": "Title (instead of the car name)", "ed_image_side": "Custom side image (URL)", "ed_image_top": "Custom top image (URL)", "ed_map_tiles": "Custom map tiles (URL with {z}/{x}/{y})", "edh_image_side": "For other BYD models. Recolouring and spinning wheels only work with the built-in Leopard 3 drawing."}); return s; })();
 const ICONS = {
   bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
   plug:'<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
@@ -325,16 +342,24 @@ class BydLeopard3Card extends HTMLElement {
   }
   _applyTheme(){
     const card = this.shadowRoot?.querySelector('.host'); if (!card) return;
-    const p = this._palette() || {}, light = this._isLight();
+    const key = THEMES[this._cfg.theme] ? this._cfg.theme : 'ha', preset = THEMES[key] || {};
+    const p = this._palette() || {}, over = this._cfg.theme_colors || {}, light = this._isLight();
+    const styled = !!preset.fonts;   // themes from the theme gallery: own fonts, borders, effects
     const set = (v, val) => val ? card.style.setProperty(v, val) : card.style.removeProperty(v);
     set('--card', p.background); set('--ha-card-background', p.background); set('--card-background-color', p.background);
     set('--card-2', p.tiles); set('--line', p.divider); set('--text', p.text); set('--muted', p.secondary);
-    set('--faint', p.secondary && p.background ? mix(p.secondary, p.background, 0.35) : null);
+    set('--faint', over.secondary == null && preset.faint ? preset.faint
+      : (p.secondary && p.background ? mix(p.secondary, p.background, 0.35) : null));
     set('--accent', p.accent);
-    card.style.background = p.background || '';
+    for (const v of ['ok', 'warn', 'err', 'park']) set('--' + v, preset[v]);
+    set('--radius', preset.radius); set('--ha-card-border-radius', preset.radius);
+    // Styled themes paint their own frame (gradient, grid, stripes) unless the background colour was changed.
+    card.style.background = styled && over.background == null ? '' : (p.background || '');
     card.style.color = p.text || '';
+    if (key === 'ha') card.removeAttribute('data-theme'); else card.setAttribute('data-theme', key);
     card.classList.toggle('light', light);
-    this._themeSig = JSON.stringify(p) + light;
+    if (preset.fonts) loadFonts(preset.fonts);
+    this._themeSig = key + JSON.stringify(p) + light;
   }
   _hex(){
     const c = this._cfg.color;
@@ -1016,7 +1041,7 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .tc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px 10px;flex-wrap:wrap}
 .tc-head h2{margin:0;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px}
 .totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 16px 12px}
-.totals div{background:var(--card-2);border-radius:10px;padding:8px 10px;min-width:0}
+.totals > div{background:var(--card-2);border-radius:10px;padding:8px 10px;min-width:0}
 .totals .k{color:var(--muted);font-size:11px}
 .totals .v{font-size:16px;font-weight:500;white-space:nowrap}
 .totals .v small{font-size:11px;color:var(--muted);font-weight:400;margin-left:2px}
@@ -1100,6 +1125,255 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .host.light .leaflet-bar a{background:#fff!important;color:#333!important;border-color:#d6d9dd!important}
 .host.light .leaflet-control-attribution{background:rgba(255,255,255,.75)!important;color:#555!important}
 .host.light .leaflet-control-attribution a{color:#333!important}
+
+/* The ha-card is the frame; the car and trips parts inside it are flat. */
+.host > .split > .card{border:0;border-radius:0;background:transparent}
+.host[data-theme]{background:var(--card);border-radius:var(--radius);overflow:hidden}
+.ring text{fill:var(--text)}
+.ring circle:first-child{stroke:var(--line)}
+@keyframes blink{50%{opacity:0}}
+@keyframes grad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+/* ---- Styled themes (from the theme gallery prototype) ---- */
+.host[data-theme=paper] .chip.ok,.host[data-theme=ios] .chip.ok{color:#2e7d32;background:rgba(76,175,80,.14)}
+.host[data-theme=paper] .chip.info,.host[data-theme=ios] .chip.info{color:#01579b;background:rgba(3,169,244,.12)}
+.host[data-theme=paper] .chip.warn,.host[data-theme=ios] .chip.warn{color:#8a4b00;background:rgba(255,152,0,.16)}
+.host[data-theme=paper] .chip.dc,.host[data-theme=ios] .chip.dc{color:#6a1b9a;background:rgba(171,71,188,.14)}
+.host[data-theme=paper] .alert.err,.host[data-theme=ios] .alert.err{color:#b71c1c}
+.host[data-theme=paper] .alert.warn,.host[data-theme=ios] .alert.warn{color:#8a4b00}
+.host[data-theme=paper] .alert.info,.host[data-theme=ios] .alert.info{color:#01579b}
+.host[data-theme=paper] .neg,.host[data-theme=ios] .neg,.host[data-theme=paper] .c-good,.host[data-theme=ios] .c-good{color:#2e7d32}
+.host[data-theme=paper] .pos,.host[data-theme=ios] .pos,.host[data-theme=paper] .c-bad,.host[data-theme=ios] .c-bad{color:#bf5b00}
+.host[data-theme=paper] .c-mid,.host[data-theme=ios] .c-mid{color:#8d6e00}
+.host[data-theme=paper] .tyre .st,.host[data-theme=ios] .tyre .st{color:#2e7d32}
+.host[data-theme=paper] .tyre.low .p,.host[data-theme=paper] .tyre.low .st,.host[data-theme=ios] .tyre.low .p,.host[data-theme=ios] .tyre.low .st{color:#bf5b00}
+.host[data-theme=paper] .offline-box.alert,.host[data-theme=ios] .offline-box.alert{background:rgba(244,67,54,.08)}
+.host[data-theme=paper] .foot.offline,.host[data-theme=ios] .foot.offline{color:#b71c1c}
+.host[data-theme=claude],.host[data-theme=claude] .seg button,.host[data-theme=claude] .leaflet-container{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px}
+.host[data-theme=claude]{border:1px solid var(--line)}
+.host[data-theme=claude] .head h2::before{content:"> ";color:var(--accent)}
+.host[data-theme=claude] .head h2{font-size:17px;font-weight:600}
+.host[data-theme=claude] .status::after{content:"▋";color:var(--accent);animation:blink 1s steps(1) infinite;margin-left:2px}
+.host[data-theme=claude] section.blk h3{text-transform:none;letter-spacing:0;color:var(--accent);font-size:12.5px;justify-content:flex-start;gap:7px}
+.host[data-theme=claude] section.blk h3::before{content:"## ";color:var(--faint)}
+.host[data-theme=claude] .tile{background:transparent;border:1px dashed var(--line);border-radius:0}
+.host[data-theme=claude] .tile .v{font-weight:500}
+.host[data-theme=claude] .chip{background:transparent;border:1px solid var(--line);border-radius:0}
+.host[data-theme=claude] .chip.ok{border-color:#5d7a47}
+.host[data-theme=claude] .chip.info{border-color:#3f6f86}
+.host[data-theme=claude] .chip.warn{border-color:#8a6a2e}
+.host[data-theme=claude] .soc-big{font-weight:400;font-size:40px}
+.host[data-theme=claude] .bar{border-radius:0;background:repeating-linear-gradient(90deg,#3a3835 0 7px,transparent 7px 9px);height:14px}
+.host[data-theme=claude] .bar i{border-radius:0;background:repeating-linear-gradient(90deg,var(--accent) 0 7px,transparent 7px 9px)!important;animation:none}
+.host[data-theme=claude] .bar i.low,.host[data-theme=claude] .bar i.crit{background:repeating-linear-gradient(90deg,var(--err) 0 7px,transparent 7px 9px)!important}
+.host[data-theme=claude] .psign{border-radius:0;background:transparent;border:1px solid var(--accent);color:var(--accent);box-shadow:none;font-family:"JetBrains Mono",monospace}
+.host[data-theme=claude] .alert{border-radius:0;background:transparent;border-left:3px solid currentColor}
+.host[data-theme=claude] .chg,.host[data-theme=claude] .chg.dc{background:transparent;border:1px solid var(--line);border-radius:0}
+.host[data-theme=claude] .seg{border-radius:0}
+.host[data-theme=claude] .seg button{border-radius:0}
+.host[data-theme=claude] .seg button[aria-pressed=true]{background:var(--accent);color:#1f1e1d}
+.host[data-theme=claude] .totals > div,.host[data-theme=claude] .offline-box{border-radius:0;background:transparent;border:1px dashed var(--line)}
+.host[data-theme=claude] .trow.sel{background:rgba(217,119,87,.14)}
+.host[data-theme=claude] .day-h .tri,.host[data-theme=claude] .trow .live{color:var(--accent)}
+.host[data-theme=claude] .foot::before{content:"~/leopard3 $";color:var(--ok);margin-right:auto;display:none}
+.host[data-theme=claude] .hero::before{background:radial-gradient(closest-side,rgba(217,119,87,.12),transparent)}
+.host[data-theme=claude] .mono{font-family:"JetBrains Mono",monospace}
+.host[data-theme=tesla],.host[data-theme=tesla] .seg button{font-family:Inter,system-ui,sans-serif;font-weight:300}
+.host[data-theme=tesla]{border:0}
+.host[data-theme=tesla] .head h2{font-weight:500;font-size:22px;letter-spacing:.01em}
+.host[data-theme=tesla] .carwrap{max-width:470px}
+.host[data-theme=tesla] .hero::before{background:radial-gradient(closest-side,rgba(255,255,255,.07),transparent)}
+.host[data-theme=tesla] .soc-big{font-size:56px;font-weight:200;letter-spacing:-2px}
+.host[data-theme=tesla] .range b{font-weight:400}
+.host[data-theme=tesla] .bar{height:4px;background:#222}
+.host[data-theme=tesla] .bar i{background:#f2f2f2}
+.host[data-theme=tesla] .bar i.low{background:var(--warn)}
+.host[data-theme=tesla] .bar i.crit{background:var(--err)}
+.host[data-theme=tesla] .bar i.charging{background-color:#36c46a}
+.host[data-theme=tesla] section.blk{border-top:1px solid #151515}
+.host[data-theme=tesla] section.blk h3{font-weight:500;color:var(--muted);letter-spacing:.12em;font-size:11px}
+.host[data-theme=tesla] .tile{padding:10px 4px;border-radius:0;border-bottom:1px solid #151515}
+.host[data-theme=tesla] .tile .v{font-size:20px;font-weight:300}
+.host[data-theme=tesla] .chip{background:#111;color:#bdbdbd;border-radius:6px}
+.host[data-theme=tesla] .chip.ok,.host[data-theme=tesla] .chip.info,.host[data-theme=tesla] .chip.dc{background:#111;color:#f2f2f2}
+.host[data-theme=tesla] .chg,.host[data-theme=tesla] .chg.dc{background:#0c0c0c;border-radius:10px}
+.host[data-theme=tesla] .chg .pw{font-weight:200;font-size:30px}
+.host[data-theme=tesla] .psign{background:transparent;border:1.5px solid #f2f2f2;border-radius:6px;box-shadow:none;font-weight:500}
+.host[data-theme=tesla] .alert{background:#111!important;border-radius:8px}
+.host[data-theme=tesla] .alert.err{color:#ff4d4f}
+.host[data-theme=tesla] .alert.warn{color:#f0b35a}
+.host[data-theme=tesla] .alert.info{color:#8fb1ff}
+.host[data-theme=tesla] .seg{background:#111;border-color:#222}
+.host[data-theme=tesla] .seg button[aria-pressed=true]{background:#f2f2f2;color:#000}
+.host[data-theme=tesla] .totals > div{background:#0c0c0c}
+.host[data-theme=tesla] .totals .v{font-weight:300;font-size:20px}
+.host[data-theme=tesla] .trow.sel{background:#111}
+.host[data-theme=gradient]{background:linear-gradient(130deg,#ff5fa2,#7b5cff 35%,#2fb9ff 70%,#5effc8);background-size:300% 300%;animation:grad 18s ease infinite;font-family:"Plus Jakarta Sans",Inter,sans-serif}
+.host[data-theme=gradient]{backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid rgba(255,255,255,.3);box-shadow:0 20px 60px rgba(40,10,90,.25)}
+.host[data-theme=gradient]{backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border-color:rgba(255,255,255,.3)}
+.host[data-theme=gradient] > .split > .card{backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border:0}
+.host[data-theme=gradient] .tile,.host[data-theme=gradient] .totals > div{border-radius:18px;border:1px solid rgba(255,255,255,.18)}
+.host[data-theme=gradient] .head h2{font-weight:700;font-size:22px}
+.host[data-theme=gradient] .soc-big{font-weight:800;font-size:44px}
+.host[data-theme=gradient] .bar{background:rgba(255,255,255,.2);height:14px;border-radius:999px}
+.host[data-theme=gradient] .bar i{background:linear-gradient(90deg,#fff,#ffe1f3);border-radius:999px;box-shadow:0 0 18px rgba(255,255,255,.6)}
+.host[data-theme=gradient] .chip{background:rgba(255,255,255,.16);color:#fff}
+.host[data-theme=gradient] .chip.ok,.host[data-theme=gradient] .chip.info,.host[data-theme=gradient] .chip.dc,.host[data-theme=gradient] .chip.warn{color:#fff;background:rgba(255,255,255,.24)}
+.host[data-theme=gradient] .chg,.host[data-theme=gradient] .chg.dc{background:rgba(255,255,255,.14);border-radius:20px}
+.host[data-theme=gradient] .alert{background:rgba(255,255,255,.18)!important;color:#fff!important;border-radius:14px}
+.host[data-theme=gradient] .neg,.host[data-theme=gradient] .pos,.host[data-theme=gradient] .c-good,.host[data-theme=gradient] .c-mid,.host[data-theme=gradient] .c-bad{color:#fff;font-weight:700}
+.host[data-theme=gradient] .seg{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25)}
+.host[data-theme=gradient] .seg button{color:#fff}
+.host[data-theme=gradient] .seg button[aria-pressed=true]{background:#fff;color:#5b2bd6}
+.host[data-theme=gradient] .trow.sel{background:rgba(255,255,255,.18)}
+.host[data-theme=gradient] .psign{border-radius:12px}
+.host[data-theme=gradient] #map{border-radius:0}
+.host[data-theme=neon]{background:radial-gradient(1200px 600px at 50% -10%,#3b0a6b 0,transparent 60%),linear-gradient(transparent 95%,rgba(255,43,214,.12) 95%) 0 0/100% 32px,linear-gradient(90deg,transparent 95%,rgba(0,240,255,.08) 95%) 0 0/32px 100%,#07000f;font-family:Rajdhani,sans-serif;font-size:15px}
+.host[data-theme=neon]{border:1px solid #ff2bd6;box-shadow:0 0 0 1px rgba(255,43,214,.3),0 0 30px rgba(255,43,214,.25),inset 0 0 40px rgba(0,240,255,.05)}
+.host[data-theme=neon]{border-color:#ff2bd6;box-shadow:0 0 30px rgba(255,43,214,.3)}
+.host[data-theme=neon] > .split > .card{box-shadow:none}
+.host[data-theme=neon] .head h2,.host[data-theme=neon] section.blk h3,.host[data-theme=neon] .soc-big,.host[data-theme=neon] .tc-head h2,.host[data-theme=neon] .spd b{font-family:Orbitron,sans-serif;text-transform:uppercase}
+.host[data-theme=neon] .head h2{color:#fff;text-shadow:0 0 12px #ff2bd6,0 0 2px #fff;letter-spacing:.06em}
+.host[data-theme=neon] section.blk h3{color:var(--accent);text-shadow:0 0 8px rgba(0,240,255,.7)}
+.host[data-theme=neon] .soc-big{color:#fff;text-shadow:0 0 16px var(--accent)}
+.host[data-theme=neon] .tile,.host[data-theme=neon] .totals > div{border:1px solid rgba(0,240,255,.28);box-shadow:inset 0 0 18px rgba(0,240,255,.06)}
+.host[data-theme=neon] .tile .v{color:#fff}
+.host[data-theme=neon] .bar{background:#1b0c33;height:10px}
+.host[data-theme=neon] .bar i{background:linear-gradient(90deg,#ff2bd6,#00f0ff)!important;box-shadow:0 0 14px #00f0ff}
+.host[data-theme=neon] .chip{background:transparent;border:1px solid rgba(255,43,214,.5);color:#f6ecff}
+.host[data-theme=neon] .chip.ok{border-color:#39ff88;color:#39ff88}
+.host[data-theme=neon] .chip.info{border-color:#00f0ff;color:#00f0ff}
+.host[data-theme=neon] .psign{background:transparent;border-color:#ff2bd6;color:#ff2bd6;box-shadow:0 0 14px #ff2bd6,inset 0 0 10px rgba(255,43,214,.4);text-shadow:0 0 8px #ff2bd6}
+.host[data-theme=neon] .chg,.host[data-theme=neon] .chg.dc{background:#0d0420;border:1px solid #39ff88;box-shadow:0 0 18px rgba(57,255,136,.25)}
+.host[data-theme=neon] .alert{background:transparent!important;border:1px solid currentColor;text-shadow:0 0 6px currentColor}
+.host[data-theme=neon] .seg{background:#0d0420;border-color:#3a1466}
+.host[data-theme=neon] .seg button[aria-pressed=true]{background:#ff2bd6;color:#fff;box-shadow:0 0 14px #ff2bd6}
+.host[data-theme=neon] .carwrap img{filter:drop-shadow(0 0 18px rgba(0,240,255,.35)) brightness(1.15)}
+.host[data-theme=neon] .road{background:repeating-linear-gradient(90deg,#00f0ff 0 34px,transparent 34px 78px);box-shadow:0 0 10px #00f0ff}
+.host[data-theme=neon] .trow.sel{background:rgba(255,43,214,.16)}
+.host[data-theme=paper],.host[data-theme=paper] .seg button{font-family:Inter,sans-serif}
+.host[data-theme=paper]{border:1px solid #cfc4ad;box-shadow:0 1px 0 #fff inset,0 10px 30px rgba(60,40,10,.08)}
+.host[data-theme=paper] .head h2,.host[data-theme=paper] .soc-big,.host[data-theme=paper] .tc-head h2,.host[data-theme=paper] .chg .pw,.host[data-theme=paper] .tile .v,.host[data-theme=paper] .totals .v{font-family:Fraunces,Georgia,serif}
+.host[data-theme=paper] .head h2{font-size:26px;font-weight:600;font-style:italic}
+.host[data-theme=paper] .soc-big{font-size:46px;font-weight:500}
+.host[data-theme=paper] section.blk{border-top:2px solid var(--text)}
+.host[data-theme=paper] section.blk h3{color:var(--text);font-weight:700;letter-spacing:.14em}
+.host[data-theme=paper] .tile{border-top:1px solid var(--line);border-radius:0;padding:8px 2px}
+.host[data-theme=paper] .tile .v{font-size:19px;font-weight:600}
+.host[data-theme=paper] .bar{background:#e4dccb;height:8px;border-radius:0}
+.host[data-theme=paper] .bar i{background:var(--text);border-radius:0}
+.host[data-theme=paper] .bar i.low,.host[data-theme=paper] .bar i.crit{background:var(--accent)}
+.host[data-theme=paper] .chip{background:transparent;border:1px solid var(--line);border-radius:2px;color:var(--muted)}
+.host[data-theme=paper] .chg,.host[data-theme=paper] .chg.dc{background:#f3eee2;border:1px solid var(--line);border-radius:2px}
+.host[data-theme=paper] .psign{background:#1c1915;border-color:#fbf8f1;border-radius:3px}
+.host[data-theme=paper] .carwrap img{filter:drop-shadow(0 12px 10px rgba(60,40,10,.25))}
+.host[data-theme=paper] .hero::before{background:none}
+.host[data-theme=paper] .topcar img{filter:none}
+.host[data-theme=paper] .alert{border-radius:2px;border-left:3px solid currentColor;background:#f3eee2!important}
+.host[data-theme=paper] .seg{background:#fbf8f1;border-color:var(--line);border-radius:2px}
+.host[data-theme=paper] .seg button{border-radius:2px}
+.host[data-theme=paper] .seg button[aria-pressed=true]{background:#1c1915;color:#fbf8f1}
+.host[data-theme=paper] .totals > div{background:transparent;border:1px solid var(--line);border-radius:2px}
+.host[data-theme=paper] .trow.sel{background:#f1e8d6}
+.host[data-theme=offroad]{font-family:Saira,sans-serif;background:repeating-linear-gradient(45deg,#1b1d16 0 22px,#1e2019 22px 44px)}
+.host[data-theme=offroad]{border:2px solid #3a3e30;box-shadow:0 0 0 1px #11130e}
+.host[data-theme=offroad] .head h2,.host[data-theme=offroad] section.blk h3,.host[data-theme=offroad] .tc-head h2,.host[data-theme=offroad] .soc-big{font-family:"Saira Stencil One",Saira,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+.host[data-theme=offroad] .head h2{font-size:24px;color:var(--accent)}
+.host[data-theme=offroad] section.blk h3{color:var(--text);font-size:14px;position:relative;padding-bottom:6px}
+.host[data-theme=offroad] section.blk h3::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:repeating-linear-gradient(-45deg,var(--accent) 0 8px,#1b1d16 8px 16px);opacity:.7}
+.host[data-theme=offroad] .tile{border-left:3px solid var(--accent);border-radius:2px}
+.host[data-theme=offroad] .soc-big{font-size:42px;color:var(--accent)}
+.host[data-theme=offroad] .bar{height:14px;border-radius:2px;background:#1b1d16;border:1px solid #454a3a}
+.host[data-theme=offroad] .bar i{border-radius:0;background:repeating-linear-gradient(-45deg,#9ccc65 0 10px,#7cab45 10px 20px)}
+.host[data-theme=offroad] .chip{border-radius:2px;background:#30342a;border:1px solid #454a3a}
+.host[data-theme=offroad] .psign{background:var(--accent);color:#1b1d16;border-color:#1b1d16;border-radius:3px}
+.host[data-theme=offroad] .chg,.host[data-theme=offroad] .chg.dc{background:#30342a;border:1px dashed var(--accent);border-radius:3px}
+.host[data-theme=offroad] .alert{border-radius:2px;border:1px solid currentColor}
+.host[data-theme=offroad] .seg{border-radius:3px;background:#262920}
+.host[data-theme=offroad] .seg button{border-radius:2px}
+.host[data-theme=offroad] .seg button[aria-pressed=true]{background:var(--accent);color:#1b1d16}
+.host[data-theme=offroad] .road{background:repeating-linear-gradient(90deg,var(--accent) 0 34px,transparent 34px 78px)}
+.host[data-theme=offroad] .totals > div{border-radius:2px;border-top:3px solid var(--accent)}
+.host[data-theme=offroad] .trow.sel{background:rgba(226,163,59,.14)}
+.host[data-theme=ios],.host[data-theme=ios] .seg button{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;letter-spacing:-.01em}
+.host[data-theme=ios]{border:0;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06)}
+.host[data-theme=ios]{border:0;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.host[data-theme=ios] > .split > .card{box-shadow:none}
+.host[data-theme=ios] .head h2{font-weight:700;font-size:24px}
+.host[data-theme=ios] .soc-big{font-weight:700;font-size:44px;letter-spacing:-1px}
+.host[data-theme=ios] section.blk{border-top:0}
+.host[data-theme=ios] section.blk h3{text-transform:none;letter-spacing:0;font-size:15px;color:#000;font-weight:600}
+.host[data-theme=ios] .tile,.host[data-theme=ios] .totals > div{border-radius:14px}
+.host[data-theme=ios] .tile .v{font-weight:600}
+.host[data-theme=ios] .bar{background:#e5e5ea;height:10px;border-radius:999px}
+.host[data-theme=ios] .bar i{background:var(--ok);border-radius:999px}
+.host[data-theme=ios] .chip{background:#f2f2f7;color:#3c3c43}
+.host[data-theme=ios] .chg{background:#e9f9ee;border-radius:18px}
+.host[data-theme=ios] .chg.dc{background:#f5e9fb}
+.host[data-theme=ios] .psign{border-radius:10px;border-color:#fff}
+.host[data-theme=ios] .hero::before{background:radial-gradient(closest-side,rgba(0,0,0,.05),transparent)}
+.host[data-theme=ios] .carwrap img{filter:drop-shadow(0 14px 12px rgba(0,0,0,.25))}
+.host[data-theme=ios] .topcar img{filter:none}
+.host[data-theme=ios] .alert{border-radius:14px}
+.host[data-theme=ios] .alert.err{background:#ffe9e8}
+.host[data-theme=ios] .alert.warn{background:#fff3e0}
+.host[data-theme=ios] .alert.info{background:#e5f1ff}
+.host[data-theme=ios] .seg{background:#e5e5ea;border:0}
+.host[data-theme=ios] .seg button{color:#000}
+.host[data-theme=ios] .seg button[aria-pressed=true]{background:#fff;color:#000;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.host[data-theme=ios] .trow.sel{background:#e5f1ff}
+.host[data-theme=ios] .foot{border-top:0}
+.host[data-theme=ios_dark],.host[data-theme=ios_dark] .seg button{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;letter-spacing:-.01em}
+.host[data-theme=ios_dark]{border:0;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06)}
+.host[data-theme=ios_dark]{border:0;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.host[data-theme=ios_dark] > .split > .card{box-shadow:none}
+.host[data-theme=ios_dark] .head h2{font-weight:700;font-size:24px}
+.host[data-theme=ios_dark] .soc-big{font-weight:700;font-size:44px;letter-spacing:-1px}
+.host[data-theme=ios_dark] section.blk{border-top:0}
+.host[data-theme=ios_dark] section.blk h3{text-transform:none;letter-spacing:0;font-size:15px;color:#000;font-weight:600}
+.host[data-theme=ios_dark] .tile,.host[data-theme=ios_dark] .totals > div{border-radius:14px}
+.host[data-theme=ios_dark] .tile .v{font-weight:600}
+.host[data-theme=ios_dark] .bar{background:#e5e5ea;height:10px;border-radius:999px}
+.host[data-theme=ios_dark] .bar i{background:var(--ok);border-radius:999px}
+.host[data-theme=ios_dark] .chip{background:#f2f2f7;color:#3c3c43}
+.host[data-theme=ios_dark] .chg{background:#e9f9ee;border-radius:18px}
+.host[data-theme=ios_dark] .chg.dc{background:#f5e9fb}
+.host[data-theme=ios_dark] .psign{border-radius:10px;border-color:#fff}
+.host[data-theme=ios_dark] .hero::before{background:radial-gradient(closest-side,rgba(0,0,0,.05),transparent)}
+.host[data-theme=ios_dark] .carwrap img{filter:drop-shadow(0 14px 12px rgba(0,0,0,.25))}
+.host[data-theme=ios_dark] .topcar img{filter:none}
+.host[data-theme=ios_dark] .alert{border-radius:14px}
+.host[data-theme=ios_dark] .alert.err{background:#ffe9e8}
+.host[data-theme=ios_dark] .alert.warn{background:#fff3e0}
+.host[data-theme=ios_dark] .alert.info{background:#e5f1ff}
+.host[data-theme=ios_dark] .seg{background:#e5e5ea;border:0}
+.host[data-theme=ios_dark] .seg button{color:#000}
+.host[data-theme=ios_dark] .seg button[aria-pressed=true]{background:#fff;color:#000;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.host[data-theme=ios_dark] .trow.sel{background:#e5f1ff}
+.host[data-theme=ios_dark] .foot{border-top:0}
+.host[data-theme=ios_dark]{box-shadow:none}
+.host[data-theme=ios_dark]{box-shadow:none}
+.host[data-theme=ios_dark] section.blk h3{color:#fff}
+.host[data-theme=ios_dark] .chip{background:#2c2c2e;color:#ebebf5}
+.host[data-theme=ios_dark] .chip.ok{background:rgba(48,209,88,.18);color:#30d158}
+.host[data-theme=ios_dark] .chip.info{background:rgba(10,132,255,.2);color:#64a8ff}
+.host[data-theme=ios_dark] .chip.warn{background:rgba(255,159,10,.18);color:#ff9f0a}
+.host[data-theme=ios_dark] .chip.dc{background:rgba(191,90,242,.2);color:#d08cff}
+.host[data-theme=ios_dark] .chg{background:rgba(48,209,88,.14)}
+.host[data-theme=ios_dark] .chg.dc{background:rgba(191,90,242,.16)}
+.host[data-theme=ios_dark] .bar{background:#38383a}
+.host[data-theme=ios_dark] .psign{border-color:#1c1c1e}
+.host[data-theme=ios_dark] .hero::before{background:radial-gradient(closest-side,rgba(255,255,255,.08),transparent)}
+.host[data-theme=ios_dark] .carwrap img{filter:drop-shadow(0 14px 12px rgba(0,0,0,.7)) brightness(1.1)}
+.host[data-theme=ios_dark] .topcar img{filter:brightness(1.25)}
+.host[data-theme=ios_dark] .alert.err{background:rgba(255,69,58,.18);color:#ff6961}
+.host[data-theme=ios_dark] .alert.warn{background:rgba(255,159,10,.16);color:#ffb340}
+.host[data-theme=ios_dark] .alert.info{background:rgba(10,132,255,.18);color:#64a8ff}
+.host[data-theme=ios_dark] .seg{background:#2c2c2e}
+.host[data-theme=ios_dark] .seg button{color:#fff}
+.host[data-theme=ios_dark] .seg button[aria-pressed=true]{background:#636366;color:#fff;box-shadow:none}
+.host[data-theme=ios_dark] .trow.sel{background:rgba(10,132,255,.2)}
+.host[data-theme=paper] .topcar .lbl,.host[data-theme=ios] .topcar .lbl{background:rgba(255,255,255,.94);color:#1c1c1e;box-shadow:0 1px 4px rgba(0,0,0,.25);font-weight:500}
+.host[data-theme=paper] .topcar .lbl.open,.host[data-theme=ios] .topcar .lbl.open{background:#fff3e0;color:#8a4b00}
 /* Card editor */
 `;
 
