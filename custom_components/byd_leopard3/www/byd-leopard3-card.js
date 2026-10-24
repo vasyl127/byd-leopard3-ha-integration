@@ -910,9 +910,9 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .locks{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
 
 /* Offline */
-.offline-box{margin:14px 16px 0;padding:14px;border-radius:10px;background:var(--card-2);display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.offline-box{margin:14px 16px 0;padding:14px;border-radius:10px;background:var(--card-2);display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;align-items:start}
 .offline-box.alert{background:rgba(244,67,54,.1)}
-.offline-box .ico{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted)}
+.offline-box .ico{width:36px;height:36px;min-width:36px;flex:none;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted)}
 .offline-box.alert .ico{background:rgba(244,67,54,.18);color:#ff8a80}
 .offline-box .ico svg{width:18px;height:18px}
 .offline-box h4{margin:0 0 4px;font-size:15px;font-weight:500}
