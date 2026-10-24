@@ -7,6 +7,7 @@ import hmac
 import json
 import logging
 import time
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,11 @@ from homeassistant.components import webhook
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
@@ -26,22 +29,28 @@ from .const import (
     CARD_FILENAME,
     CONF_CAPACITY,
     CONF_FIELD_MAP,
+    CONF_HISTORY_DAYS,
     CONF_MODEL,
     CONF_RECORD_TRIPS,
     CONF_SECRET,
     CONF_SOURCE,
     CONF_WEBHOOK_ID,
+    DB_FILE,
+    DEFAULT_HISTORY_DAYS,
     DEFAULT_MODEL,
     DOMAIN,
     MODELS,
     SIGNAL_NEW_KEYS,
     SIGNAL_TRIPS,
     SIGNAL_UPDATE,
+    SAMPLE_EVERY_ACTIVE,
+    SAMPLE_EVERY_IDLE,
     SOURCE_AUTO,
     STORAGE_VERSION,
     URL_BASE,
     VERSION,
 )
+from .db import HistoryDB
 from .normalize import normalize
 from .trips import TripRecorder, thin
 
@@ -50,22 +59,28 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.DEVICE_TRACKER]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-MAX_TRIPS = 1000          # trips kept in storage
-MAX_TRIPS_WITH_ROUTE = 150  # newest trips keep their GPS points
+RECENT_TRIPS = 50         # newest trips kept in memory (the database has all of them)
 SAVE_DELAY = 15           # s
+FLUSH_EVERY = timedelta(seconds=30)
+PURGE_EVERY = timedelta(hours=6)
+DB_KEY = "_db"
 
 
 class Vehicle:
     """Runtime state of one car: latest values, trip recorder, storage."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, db: HistoryDB) -> None:
         self.hass = hass
         self.entry = entry
+        self.db = db
         self.store: Store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
         self.values: dict[str, Any] = {}
         self.last_update: float | None = None
-        self.trips: list[dict[str, Any]] = []
+        self.trips: list[dict[str, Any]] = []   # newest RECENT_TRIPS, without routes
         self.recorder = TripRecorder(self.capacity, on_finish=self._trip_finished)
+        self._samples: list[tuple[float, dict[str, Any]]] = []
+        self._sampled: dict[str, Any] = {}
+        self._sampled_at = 0.0
 
     # -- options ----------------------------------------------------------------------------
     def opt(self, key: str, default: Any = None) -> Any:
@@ -79,6 +94,10 @@ class Vehicle:
     def capacity(self) -> float:
         cap = self.opt(CONF_CAPACITY)
         return float(cap) if cap else MODELS.get(self.model, MODELS["other"])["capacity"]
+
+    @property
+    def history_days(self) -> int:
+        return int(self.opt(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS) or 0)
 
     @property
     def field_map(self) -> dict[str, Any]:
@@ -96,14 +115,23 @@ class Vehicle:
         data = await self.store.async_load() or {}
         self.values = data.get("values", {})
         self.last_update = data.get("last_update")
-        self.trips = data.get("trips", [])
         self.recorder.load(data.get("recorder"))
+        eid = self.entry.entry_id
+        # Version 1.0 kept trips in .storage; move them into the database once.
+        old = data.get("trips") or []
+        if old and await self.hass.async_add_executor_job(self.db.trip_count, eid) == 0:
+            for trip in old:
+                await self.hass.async_add_executor_job(self.db.add_trip, eid, trip)
+            _LOGGER.info("Moved %d trips of %s into %s", len(old), self.entry.title, DB_FILE)
+        self.trips = await self.hass.async_add_executor_job(lambda: self.db.trips(eid, limit=RECENT_TRIPS))
+        if old:
+            self.schedule_save()
 
     def _data_to_save(self) -> dict[str, Any]:
         rec = self.recorder.dump()
         if rec.get("cur"):
             rec = {**rec, "cur": {**rec["cur"], "points": thin(rec["cur"]["points"], 3000)}}
-        return {"values": self.values, "last_update": self.last_update, "trips": self.trips, "recorder": rec}
+        return {"values": self.values, "last_update": self.last_update, "recorder": rec}
 
     def schedule_save(self) -> None:
         self.store.async_delay_save(self._data_to_save, SAVE_DELAY)
@@ -120,6 +148,7 @@ class Vehicle:
             canon["speed"] = 0
         self.values.update(canon)
         self.last_update = time.time()
+        self._sample(canon.get("utc", self.last_update))
         was_driving = self.recorder.cur is not None
         if self.opt(CONF_RECORD_TRIPS, True):
             self.recorder.capacity = self.capacity
@@ -132,15 +161,39 @@ class Vehicle:
             async_dispatcher_send(self.hass, SIGNAL_TRIPS.format(self.entry.entry_id))
         return canon
 
+    # -- long-term history --------------------------------------------------------------------
+    @callback
+    def _sample(self, ts: float) -> None:
+        """Queue what changed since the last sample, at most every 10 s (moving/charging) or 60 s."""
+        active = bool(self.values.get("is_charging")) or self.recorder.cur is not None
+        if ts - self._sampled_at < (SAMPLE_EVERY_ACTIVE if active else SAMPLE_EVERY_IDLE):
+            return
+        diff = {k: v for k, v in self.values.items() if k != "utc" and self._sampled.get(k) != v}
+        self._sampled_at = ts
+        if diff:
+            self._sampled.update(diff)
+            self._samples.append((ts, diff))
+
+    async def async_flush(self, *_: Any) -> None:
+        batch, self._samples = self._samples, []
+        if batch:
+            await self.hass.async_add_executor_job(self.db.add_samples, self.entry.entry_id, batch)
+
+    async def async_purge(self, *_: Any) -> None:
+        if self.history_days > 0:
+            await self.hass.async_add_executor_job(
+                self.db.purge_samples, self.entry.entry_id, time.time() - self.history_days * 86400)
+
     @callback
     def _trip_finished(self, trip: dict[str, Any]) -> None:
         if trip["km"] < 0.05:
             return  # a few metres in the yard is not a trip
-        self.trips.append(trip)
-        self.trips = self.trips[-MAX_TRIPS:]
-        for old in self.trips[:-MAX_TRIPS_WITH_ROUTE]:
-            old["points"] = []
-        self.schedule_save()
+        self.hass.async_create_task(self._store_trip(trip))
+
+    async def _store_trip(self, trip: dict[str, Any]) -> None:
+        await self.hass.async_add_executor_job(self.db.add_trip, self.entry.entry_id, trip)
+        self.trips.append({**{k: v for k, v in trip.items() if k != "points"}, "has_route": bool(trip.get("points"))})
+        self.trips = self.trips[-RECENT_TRIPS:]
         async_dispatcher_send(self.hass, SIGNAL_TRIPS.format(self.entry.entry_id))
 
     def last_trip(self) -> dict[str, Any] | None:
@@ -162,8 +215,26 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+async def _async_db(hass: HomeAssistant) -> HistoryDB:
+    """The shared history database, opened on first use and closed when HA stops."""
+    data = hass.data.setdefault(DOMAIN, {})
+    if DB_KEY not in data:
+        db = HistoryDB(hass.config.path(DB_FILE))
+        await hass.async_add_executor_job(db.open)
+        data[DB_KEY] = db
+
+        async def _close(_: Event) -> None:
+            for v in list(hass.data.get(DOMAIN, {}).values()):
+                if isinstance(v, Vehicle):
+                    await v.async_flush()
+            await hass.async_add_executor_job(db.close)
+
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close)
+    return data[DB_KEY]
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    vehicle = Vehicle(hass, entry)
+    vehicle = Vehicle(hass, entry, await _async_db(hass))
     await vehicle.async_load()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = vehicle
     entry.runtime_data = vehicle
@@ -172,6 +243,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                            allowed_methods=["POST", "PUT"])
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload))
+    entry.async_on_unload(async_track_time_interval(hass, vehicle.async_flush, FLUSH_EVERY))
+    entry.async_on_unload(async_track_time_interval(hass, vehicle.async_purge, PURGE_EVERY))
+    hass.async_create_task(vehicle.async_purge())
     return True
 
 
@@ -184,6 +258,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     vehicle: Vehicle = hass.data[DOMAIN][entry.entry_id]
     ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if ok:
+        await vehicle.async_flush()
         await vehicle.store.async_save(vehicle._data_to_save())
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return ok
@@ -191,6 +266,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
+    db = await _async_db(hass)
+    await hass.async_add_executor_job(db.remove_entry, entry.entry_id)
 
 
 def _authorized(secret: str, body: bytes, request: Request) -> bool:

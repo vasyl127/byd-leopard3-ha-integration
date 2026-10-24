@@ -17,12 +17,14 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_CAPACITY,
     CONF_FIELD_MAP,
+    CONF_HISTORY_DAYS,
     CONF_MODEL,
     CONF_OFFLINE_AFTER,
     CONF_RECORD_TRIPS,
     CONF_SECRET,
     CONF_SOURCE,
     CONF_WEBHOOK_ID,
+    DEFAULT_HISTORY_DAYS,
     DEFAULT_MODEL,
     DEFAULT_OFFLINE_AFTER,
     DOMAIN,
@@ -108,6 +110,9 @@ class BydOptionsFlow(OptionsFlow):
                 selector.NumberSelectorConfig(min=30, max=3600, step=10, unit_of_measurement="s",
                                               mode=selector.NumberSelectorMode.BOX)),
             vol.Required(CONF_RECORD_TRIPS, default=cur.get(CONF_RECORD_TRIPS, True)): bool,
+            vol.Required(CONF_HISTORY_DAYS, default=cur.get(CONF_HISTORY_DAYS, DEFAULT_HISTORY_DAYS)): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=0, max=3650, step=1, unit_of_measurement="d",
+                                              mode=selector.NumberSelectorMode.BOX)),
             vol.Optional(CONF_SECRET, description={"suggested_value": cur.get(CONF_SECRET, "")}): str,
             vol.Optional(CONF_FIELD_MAP, description={"suggested_value": cur.get(CONF_FIELD_MAP, "")}): selector.TextSelector(
                 selector.TextSelectorConfig(multiline=True)),

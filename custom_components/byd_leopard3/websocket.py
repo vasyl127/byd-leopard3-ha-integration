@@ -19,6 +19,8 @@ def async_register_websocket(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_vehicles)
     websocket_api.async_register_command(hass, ws_trips)
     websocket_api.async_register_command(hass, ws_trip)
+    websocket_api.async_register_command(hass, ws_history)
+    websocket_api.async_register_command(hass, ws_db_stats)
 
 
 def _vehicles(hass: HomeAssistant) -> dict[str, Any]:
@@ -46,24 +48,34 @@ def ws_vehicles(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
     connection.send_result(msg["id"], out)
 
 
+ROUTE_POINTS = 3000      # points sent to the card for one route
+HISTORY_POINTS = 2000    # points per key for history charts
+
+
 def _strip(t: dict[str, Any]) -> dict[str, Any]:
     return {k: val for k, val in t.items() if k != "points"} | {"has_route": bool(t.get("points"))}
+
+
+def _get(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]):
+    v = _vehicles(hass).get(msg["entry_id"])
+    if v is None:
+        connection.send_error(msg["id"], "not_found", "Unknown vehicle")
+    return v
 
 
 @websocket_api.websocket_command({
     vol.Required("type"): f"{DOMAIN}/trips",
     vol.Required("entry_id"): str,
-    vol.Optional("days", default=7): vol.All(int, vol.Range(min=1, max=3650)),
+    vol.Optional("days", default=7): vol.All(int, vol.Range(min=1, max=36500)),
 })
-@callback
-def ws_trips(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Trips of the last N days (without routes) plus the trip in progress."""
-    v = _vehicles(hass).get(msg["entry_id"])
+@websocket_api.async_response
+async def ws_trips(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Trips of the last N days from the database (without routes) plus the trip in progress."""
+    v = _get(hass, connection, msg)
     if v is None:
-        connection.send_error(msg["id"], "not_found", "Unknown vehicle")
         return
     since = time.time() - msg["days"] * 86400
-    trips = [_strip(t) for t in v.trips if t["start"] >= since]
+    trips = await hass.async_add_executor_job(v.db.trips, v.entry.entry_id, since)
     live = v.recorder.live()
     connection.send_result(msg["id"], {"trips": trips, "live": _strip(live) if live else None})
 
@@ -73,18 +85,49 @@ def ws_trips(hass: HomeAssistant, connection: websocket_api.ActiveConnection, ms
     vol.Required("entry_id"): str,
     vol.Required("trip_id"): str,
 })
-@callback
-def ws_trip(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+@websocket_api.async_response
+async def ws_trip(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """One trip with its GPS points. trip_id "live" is the trip in progress."""
-    v = _vehicles(hass).get(msg["entry_id"])
+    v = _get(hass, connection, msg)
     if v is None:
-        connection.send_error(msg["id"], "not_found", "Unknown vehicle")
         return
     if msg["trip_id"] == "live":
         trip = v.recorder.live()
     else:
-        trip = next((t for t in reversed(v.trips) if t["id"] == msg["trip_id"]), None)
+        trip = await hass.async_add_executor_job(v.db.trip, v.entry.entry_id, msg["trip_id"], ROUTE_POINTS)
     if trip is None:
         connection.send_error(msg["id"], "not_found", "Unknown trip")
         return
     connection.send_result(msg["id"], trip)
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/history",
+    vol.Required("entry_id"): str,
+    vol.Required("keys"): [str],
+    vol.Optional("start"): vol.Coerce(float),
+    vol.Optional("end"): vol.Coerce(float),
+    vol.Optional("max_points", default=HISTORY_POINTS): vol.All(int, vol.Range(min=10, max=20000)),
+})
+@websocket_api.async_response
+async def ws_history(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Telemetry history from the database: {key: [[unix_ts, value], ...]} for numeric keys."""
+    v = _get(hass, connection, msg)
+    if v is None:
+        return
+    await v.async_flush()
+    end = msg.get("end") or time.time()
+    start = msg.get("start") or end - 86400
+    data = await hass.async_add_executor_job(v.db.samples, v.entry.entry_id, msg["keys"], start, end, msg["max_points"])
+    connection.send_result(msg["id"], data)
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/db_stats", vol.Required("entry_id"): str})
+@websocket_api.async_response
+async def ws_db_stats(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """How much history the database holds for a car."""
+    v = _get(hass, connection, msg)
+    if v is None:
+        return
+    stats = await hass.async_add_executor_job(v.db.stats, v.entry.entry_id)
+    connection.send_result(msg["id"], stats | {"history_days": v.history_days})

@@ -19,7 +19,8 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
 
 - **Any source.** BYDMate (Iternio/ABRP format), BYD EV Pro, a generic JSON format, or any JSON with a field map. The format is detected automatically.
 - **Entities appear on their own** for the values your car actually sends: battery, charging, climate, tyres, doors, locks, windows, location and more. 60+ possible entities, translated to English and Ukrainian.
-- **Trips** are recorded inside Home Assistant with the logic from BYDMate: start after 5 s above 3 km/h, end after 3 min at standstill, distance from the odometer (GPS fallback), energy from integrated power with BYDMate's plausibility checks, moving time without GPS gaps. Stored locally, with routes for the newest 150 trips.
+- **Trips** are recorded inside Home Assistant with the logic from BYDMate: start after 5 s above 3 km/h, end after 3 min at standstill, distance from the odometer (GPS fallback), energy from integrated power with BYDMate's plausibility checks, moving time without GPS gaps.
+- **Long-term history** in a local SQLite database (`config/byd_leopard3.db`): every trip with its full GPS route, kept forever, plus telemetry samples (every 10 s while driving or charging, every 60 s when parked, only values that changed) kept for 365 days by default. It survives restarts and goes into Home Assistant backups. Trips from version 1.0 are moved in automatically.
 - **Online / offline**: a connectivity sensor turns off when packets stop.
 - **The card** (installed automatically, no resource to add):
   - three layouts: *car*, *trips*, or *combined* (side by side on wide screens, stacked on phones; it reacts to the card's own width);
@@ -144,9 +145,21 @@ image_top: /local/car_top.png
 map_tiles: https://tile.openstreetmap.org/{z}/{x}/{y}.png  # optional
 ```
 
+## History database
+
+`config/byd_leopard3.db` (SQLite) has three tables: `trips` (summary per trip), `points` (the full GPS route of every trip) and `samples` (telemetry, one JSON row with the values that changed). Trips and routes are never deleted. Telemetry older than *Keep telemetry history* (integration options, default 365 days, `0` keeps everything) is purged every 6 hours. Removing the integration deletes its rows.
+
+The sensors themselves are also recorded by Home Assistant's own recorder as usual, so their graphs and long-term statistics work everywhere in HA.
+
 ## Websocket API
 
-The card uses three commands you can use too: `byd_leopard3/vehicles`, `byd_leopard3/trips` (`entry_id`, `days`) and `byd_leopard3/trip` (`entry_id`, `trip_id`, or `"live"` for the trip in progress).
+The card uses these commands, and you can use them too:
+
+- `byd_leopard3/vehicles`
+- `byd_leopard3/trips` (`entry_id`, `days` up to 36500)
+- `byd_leopard3/trip` (`entry_id`, `trip_id`, or `"live"` for the trip in progress), with the GPS route
+- `byd_leopard3/history` (`entry_id`, `keys`, optional `start`, `end` as unix seconds, `max_points`): `{key: [[ts, value], ...]}` from the database
+- `byd_leopard3/db_stats` (`entry_id`): how many trips, route points and samples are stored
 
 ## Development
 
@@ -182,7 +195,7 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 
 - Автоматично визначає формат даних: BYDMate, BYD EV Pro, загальний JSON або будь-який JSON через мапу полів.
 - Створює лише ті датчики, які авто справді надсилає. Назви датчиків перекладені англійською та українською.
-- Записує поїздки за логікою BYDMate і зберігає їх локально в Home Assistant.
+- Записує поїздки за логікою BYDMate у локальну базу SQLite (`config/byd_leopard3.db`): усі поїздки з повними GPS-маршрутами зберігаються назавжди, телеметрія — 365 днів (змінюється в параметрах інтеграції, `0` — без обмеження). Дані переживають перезапуск і потрапляють у бекапи HA. У картці є періоди «Рік» і «Все».
 - Картка має три варіанти: авто, поїздки, комплект. Комплект на широкому екрані показує поїздки справа, а на телефоні знизу.
 - Колір авто: заводські кольори Leopard 3 / Tai 3 (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) або будь-який свій.
 - Сповіщення: спущене чи низьке колесо, низький заряд, слабкий 12 В, гаряча батарея, розбаланс комірок, відчинені двері, багажник чи капот, незамкнені двері, відкриті вікна.

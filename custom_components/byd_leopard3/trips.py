@@ -65,8 +65,8 @@ def moving_time(points: list[dict[str, Any]], start: float, end: float | None) -
 
 
 def thin(points: list[dict[str, Any]], limit: int = MAX_POINTS_STORED) -> list[dict[str, Any]]:
-    """Keep the first and last point and an even spread in between."""
-    if len(points) <= limit:
+    """Keep the first and last point and an even spread in between. limit=0 keeps everything."""
+    if not limit or len(points) <= limit:
         return points
     step = (len(points) - 1) / (limit - 1)
     return [points[round(i * step)] for i in range(limit)]
@@ -159,7 +159,7 @@ class TripRecorder:
         # Carry values the packet left out, so the end-of-trip summary has them.
         c["last"] = {**last, **{k: v for k, v in p.items() if v is not None}}
 
-    def summary(self, c: dict[str, Any], end: float) -> dict[str, Any]:
+    def summary(self, c: dict[str, Any], end: float, limit: int = MAX_POINTS_STORED) -> dict[str, Any]:
         pts = [pt for pt in c["points"] if pt["t"] <= end]
         last = c["last"]
         gps_km = sum(haversine_km(a["lat"], a["lon"], b["lat"], b["lon"]) for a, b in zip(pts, pts[1:]))
@@ -183,14 +183,14 @@ class TripRecorder:
             "start_lat": pts[0]["lat"] if pts else c.get("start_lat"),
             "start_lon": pts[0]["lon"] if pts else c.get("start_lon"),
             "end_lat": pts[-1]["lat"] if pts else None, "end_lon": pts[-1]["lon"] if pts else None,
-            "points": thin(pts),
+            "points": thin(pts, limit),
         }
 
     def finish(self, end: float) -> dict[str, Any] | None:
         if not self.cur:
             self.state = "idle"
             return None
-        trip = self.summary(self.cur, end)
+        trip = self.summary(self.cur, end, limit=0)  # the database keeps the full route
         self.cur = None
         self.state = "idle"
         self._zero_since = None

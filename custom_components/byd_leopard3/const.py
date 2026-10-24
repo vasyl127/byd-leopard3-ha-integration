@@ -14,6 +14,7 @@ CONF_OFFLINE_AFTER = "offline_after"
 CONF_SECRET = "webhook_secret"
 CONF_FIELD_MAP = "field_map"
 CONF_RECORD_TRIPS = "record_trips"
+CONF_HISTORY_DAYS = "history_days"
 
 # Where the data comes from. "auto" detects the payload shape on every request.
 SOURCE_AUTO = "auto"
@@ -42,6 +43,13 @@ SIGNAL_NEW_KEYS = f"{DOMAIN}_new_keys_{{}}"
 SIGNAL_TRIPS = f"{DOMAIN}_trips_{{}}"
 
 STORAGE_VERSION = 1
+
+# Long-term history (SQLite in the config dir). Trips and routes are kept forever;
+# telemetry samples for CONF_HISTORY_DAYS (0 = forever).
+DB_FILE = "byd_leopard3.db"
+DEFAULT_HISTORY_DAYS = 365
+SAMPLE_EVERY_ACTIVE = 10   # s between samples while driving or charging
+SAMPLE_EVERY_IDLE = 60     # s between samples while parked
 
 URL_BASE = f"/{DOMAIN}_static"
 CARD_FILENAME = "byd-leopard3-card.js"

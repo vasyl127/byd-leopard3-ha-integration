@@ -34,12 +34,14 @@
           "capacity": "Battery capacity override",
           "offline_after": "Offline after",
           "record_trips": "Record trips",
+          "history_days": "Keep telemetry history (days)",
           "webhook_secret": "Webhook secret (optional)",
           "field_map": "Field map (JSON)"
         },
         "data_description": {
           "webhook_secret": "If set, requests must carry Authorization: Bearer SECRET (the Secret field in BYDMate) or X-Webhook-Signature = HMAC-SHA256(body).",
-          "capacity": "Leave empty to use the model's capacity."
+          "capacity": "Leave empty to use the model's capacity.",
+          "history_days": "Telemetry samples in byd_leopard3.db older than this are deleted. 0 keeps everything. Trips and routes are always kept."
         }
       }
     },
