@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.3.2';
+const VERSION = '1.3.3';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -1107,7 +1107,7 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .detail .ttl span{color:var(--muted);font-size:12px}
 .mono{font-family:"Roboto Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .days{padding:6px 0 8px}
-.periods{display:flex;justify-content:center;padding:12px 16px 2px}
+.periods{display:flex;justify-content:flex-end;padding:12px 16px 2px}
 .day{border-top:1px solid var(--line)}
 .day-h{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 16px;cursor:pointer;user-select:none}
 .day-h b{font-weight:500}
