@@ -26,6 +26,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
   - three layouts: *car*, *trips*, or *combined* (side by side on wide screens, stacked on phones; it reacts to the card's own width);
   - tap any value (charge, power, temperatures, tyres, locks, odometer, …) to open its Home Assistant history graph, like any sensor;
   - animated wheels and road while driving, a parking sign when parked;
+  - trip route coloured by the power drawn from the battery: blue under 15 kW, green 15–22, yellow 22–27, red 27+ kW (grey where no power data); routes recorded before 1.3 take power from the telemetry samples;
   - alerts at the top: flat or low tyre, low and critical battery, weak 12 V battery, hot battery, cell imbalance, open doors, hood or trunk, unlocked doors, open windows;
   - charging forecast: time to the target and the clock time it finishes (DC slows down above 80%);
   - offline view hides stale values and shows when the last packet came;

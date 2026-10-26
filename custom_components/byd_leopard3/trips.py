@@ -148,9 +148,12 @@ class TripRecorder:
     def _record(self, p: dict[str, Any]) -> None:
         c = self.cur
         assert c is not None
-        if p.get("lat") is not None and p.get("lon") is not None:
-            c["points"].append({"t": p["utc"], "lat": p["lat"], "lon": p["lon"], "speed": p.get("speed") or 0})
         last = c["last"]
+        if p.get("lat") is not None and p.get("lon") is not None:
+            # power: kW drawn from the battery (negative = regen/charging); a packet without it keeps the last value.
+            power = p["power"] if p.get("power") is not None else last.get("power")
+            c["points"].append({"t": p["utc"], "lat": p["lat"], "lon": p["lon"], "speed": p.get("speed") or 0,
+                                "power": None if power is None else round(power, 1)})
         dt = p["utc"] - last["utc"]
         if 0 < dt <= MAX_GAP and last.get("power") is not None:
             c["kwh"] += last["power"] * dt / 3600

@@ -93,6 +93,10 @@ async def ws_trip(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
         return
     if msg["trip_id"] == "live":
         trip = v.recorder.live()
+        if trip is not None:
+            # copies: filling power from samples must not touch the recorder's own points
+            trip["points"] = [dict(p) for p in trip["points"]]
+            await hass.async_add_executor_job(v.db.fill_power, v.entry.entry_id, trip["points"])
     else:
         trip = await hass.async_add_executor_job(v.db.trip, v.entry.entry_id, msg["trip_id"], ROUTE_POINTS)
     if trip is None:

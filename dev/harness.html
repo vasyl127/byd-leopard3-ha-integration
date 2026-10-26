@@ -28,7 +28,9 @@
 <div id="wrap"></div>
 <script type="module">
 customElements.define('ha-card', class extends HTMLElement {});
-const trips = await (await fetch('./trips.json')).json();
+const trips = (await (await fetch('./trips.json')).json())
+  // demo power (kW) for the route colours; the first trip is left without power to show the "no data" colour
+  .map((t, n) => n === 0 ? t : {...t, points: t.points.map((p, i) => ({...p, power: p.power ?? Math.round((3 + p.speed * 0.3 + 5 * Math.sin(i / 12)) * 10) / 10}))});
 const KEYS = ['soc','soh','range','power','voltage','current','batt_temp','batt_temp_min','batt_temp_max','capacity','kwh_charged','speed','odometer',
   'cabin_temp','ext_temp','hvac_setpoint','aux_voltage','cell_max_v','cell_min_v','front_motor_temp','rear_motor_temp','motor_rpm',
   'tyre_pressure_fl','tyre_pressure_fr','tyre_pressure_rl','tyre_pressure_rr','tyre_temp_fl','tyre_temp_fr','tyre_temp_rl','tyre_temp_rr',

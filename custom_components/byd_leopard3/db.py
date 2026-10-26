@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS points (
     t REAL NOT NULL,
     lat REAL NOT NULL,
     lon REAL NOT NULL,
-    speed REAL
+    speed REAL,
+    power REAL
 );
 CREATE INDEX IF NOT EXISTS points_trip ON points (entry_id, trip_id, t);
 CREATE TABLE IF NOT EXISTS samples (
@@ -39,6 +40,9 @@ CREATE TABLE IF NOT EXISTS samples (
 );
 CREATE INDEX IF NOT EXISTS samples_t ON samples (entry_id, t);
 """
+
+# How far before a route to look for the last sampled power value (samples store only changes).
+POWER_LOOKBACK_S = 3600
 
 # Columns kept out of the JSON blob of a trip.
 _TRIP_COLS = ("id", "start", "end", "km", "kwh", "points")
@@ -66,6 +70,9 @@ class HistoryDB:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             conn.executescript(SCHEMA)
+            # Older databases: points had no power column (kW drawn from the battery at each point).
+            if "power" not in {r[1] for r in conn.execute("PRAGMA table_info(points)")}:
+                conn.execute("ALTER TABLE points ADD COLUMN power REAL")
             conn.commit()
             self._conn = conn
 
@@ -92,8 +99,8 @@ class HistoryDB:
             )
             c.execute("DELETE FROM points WHERE entry_id=? AND trip_id=?", (entry_id, trip["id"]))
             c.executemany(
-                "INSERT INTO points (entry_id, trip_id, t, lat, lon, speed) VALUES (?,?,?,?,?,?)",
-                [(entry_id, trip["id"], p["t"], p["lat"], p["lon"], p.get("speed")) for p in pts],
+                "INSERT INTO points (entry_id, trip_id, t, lat, lon, speed, power) VALUES (?,?,?,?,?,?,?)",
+                [(entry_id, trip["id"], p["t"], p["lat"], p["lon"], p.get("speed"), p.get("power")) for p in pts],
             )
             c.commit()
 
@@ -134,11 +141,37 @@ class HistoryDB:
                             (entry_id, trip_id)).fetchone()
             if row is None:
                 return None
-            pts = c.execute("SELECT t, lat, lon, speed FROM points WHERE entry_id=? AND trip_id=? ORDER BY t",
+            pts = c.execute("SELECT t, lat, lon, speed, power FROM points WHERE entry_id=? AND trip_id=? ORDER BY t",
                             (entry_id, trip_id)).fetchall()
         trip = self._row(row)
-        trip["points"] = [{"t": t, "lat": lat, "lon": lon, "speed": sp} for t, lat, lon, sp in thin(pts, max_points)]
+        trip["points"] = [{"t": t, "lat": lat, "lon": lon, "speed": sp, "power": pw} for t, lat, lon, sp, pw in thin(pts, max_points)]
+        self.fill_power(entry_id, trip["points"])
         return trip
+
+    def fill_power(self, entry_id: str, points: list[dict[str, Any]]) -> None:
+        """Points recorded before power was stored: take the last sampled `power` at or before each point."""
+        missing = [p for p in points if p.get("power") is None]
+        if not missing:
+            return
+        start, end = missing[0]["t"], missing[-1]["t"]
+        with self._lock:
+            # Samples hold only changed values, so look back far enough to find the value in effect at the start.
+            rows = self._c().execute(
+                "SELECT t, data FROM samples WHERE entry_id=? AND t>=? AND t<=? ORDER BY t",
+                (entry_id, start - POWER_LOOKBACK_S, end)).fetchall()
+        series = []
+        for t, data in rows:
+            v = json.loads(data).get("power")
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                series.append((t, float(v)))
+        if not series:
+            return
+        i, cur = 0, None
+        for p in missing:
+            while i < len(series) and series[i][0] <= p["t"]:
+                cur = series[i][1]
+                i += 1
+            p["power"] = cur
 
     # -- telemetry samples -------------------------------------------------------------------
     def add_samples(self, entry_id: str, samples: list[tuple[float, dict[str, Any]]]) -> None:

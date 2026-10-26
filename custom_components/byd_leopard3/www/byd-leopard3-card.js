@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -141,7 +141,7 @@ const STR = (() => { const s = {
     more:'Ще {n}', less:'Згорнути',
     // trips
     trips:'Поїздки', today:'Сьогодні', week:'7 днів', distance:'Відстань', energy:'Енергія', average:'Середнє', count:'Поїздок',
-    up_to:'до 30', kmh_plus:'90+ км/год', h_time:'час', h_dur:'трив.', h_km:'км', now:'зараз', no_trips:'За цей період поїздок немає',
+    pw_low:'до 15', pw_high:'27+ кВт', pw_na:'немає даних', h_time:'час', h_dur:'трив.', h_km:'км', now:'зараз', no_trips:'За цей період поїздок немає',
     consumption:'Витрата', duration:'Тривалість', moving:'у русі {d}', avg_speed:'Сер. швидкість', over_moving:'за час у русі',
     battery:'Батарея', gps:'Точок GPS', per_sec:'1 пакет/с', start:'Старт', finish:'Фініш', on_road:'в дорозі', map_fail:'Карта не завантажилась (немає інтернету)',
     // editor
@@ -180,7 +180,7 @@ const STR = (() => { const s = {
     d_lf:'driver door', d_rf:'passenger door', d_lr:'rear left door', d_rr:'rear right door', d_hood:'hood', d_trunk:'trunk',
     more:'{n} more', less:'Show less',
     trips:'Trips', today:'Today', week:'7 days', distance:'Distance', energy:'Energy', average:'Average', count:'Trips',
-    up_to:'under 30', kmh_plus:'90+ km/h', h_time:'time', h_dur:'dur.', h_km:'km', now:'now', no_trips:'No trips in this period',
+    pw_low:'under 15', pw_high:'27+ kW', pw_na:'no data', h_time:'time', h_dur:'dur.', h_km:'km', now:'now', no_trips:'No trips in this period',
     consumption:'Consumption', duration:'Duration', moving:'moving {d}', avg_speed:'Avg speed', over_moving:'while moving',
     battery:'Battery', gps:'GPS points', per_sec:'1 packet/s', start:'Start', finish:'Finish', on_road:'on the road', map_fail:'Map failed to load (offline)',
     ed_title:'Card visual editor', ed_layout:'Card layout', l_car:'Car', l_trips:'Trips', l_combo:'Combined',
@@ -243,7 +243,10 @@ const dayKey = (ts) => { const d = new Date(ts*1000); return `${d.getFullYear()}
 const per100Cls = (v) => v == null ? '' : v < 20 ? 'c-good' : v <= 25 ? 'c-mid' : 'c-bad';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
-const speedColor = (v) => v < 30 ? '#4fc3f7' : v < 60 ? '#66bb6a' : v < 90 ? '#ffca28' : '#ef5350';
+// Route colour by power drawn from the battery, kW (regen/negative counts as low). Unknown (no data) — grey.
+const POWER_BANDS = [[15, '#4fc3f7'], [22, '#66bb6a'], [27, '#ffca28'], [Infinity, '#ef5350']];
+const POWER_NA = '#8e8e93';
+const powerColor = (kw) => kw == null || !isFinite(kw) ? POWER_NA : POWER_BANDS.find(([max]) => kw < max)[1];
 // Attributes that open the entity's more-info dialog (history graph) on click.
 const more = (eid) => eid ? ` data-act="more" data-e="${eid}" role="button" tabindex="0"` : '';
 const IMG_W = 949, IMG_H = 372, WHEEL_R = 66, WHEELS = [[165, 282], [738, 282]];
@@ -704,9 +707,9 @@ class BydLeopard3Card extends HTMLElement {
     const L = window.L, pts = trip.points || [];
     this._routeLayer.clearLayers();
     if (pts.length < 2) return;
-    let seg = [[pts[0].lat, pts[0].lon]], col = speedColor(pts[0].speed);
+    let seg = [[pts[0].lat, pts[0].lon]], col = powerColor(pts[0].power);
     for (let i = 1; i < pts.length; i++){
-      const cc = speedColor(pts[i].speed);
+      const cc = powerColor(pts[i].power);
       seg.push([pts[i].lat, pts[i].lon]);
       if (cc !== col || i === pts.length - 1){ L.polyline(seg, {color: col, weight: 4, opacity: .95}).addTo(this._routeLayer); seg = [[pts[i].lat, pts[i].lon]]; col = cc; }
     }
@@ -788,7 +791,7 @@ class BydLeopard3Card extends HTMLElement {
         </div></div>`;
     }
     morph(this.$('tbody'), `
-      ${this._cfg.show_trips_map === false ? '' : `<div class="legend"><span><i style="background:#4fc3f7"></i>${t('up_to')}</span><span><i style="background:#66bb6a"></i>30–60</span><span><i style="background:#ffca28"></i>60–90</span><span><i style="background:#ef5350"></i>${t('kmh_plus')}</span></div>`}
+      ${this._cfg.show_trips_map === false ? '' : `<div class="legend"><span><i style="background:#4fc3f7"></i>${t('pw_low')}</span><span><i style="background:#66bb6a"></i>15–22</span><span><i style="background:#ffca28"></i>22–27</span><span><i style="background:#ef5350"></i>${t('pw_high')}</span>${this._route?.points?.some(p => p.power == null) ? `<span><i style="background:${POWER_NA}"></i>${t('pw_na')}</span>` : ''}</div>`}
       ${detail}<div class="days">${days}</div>`);
   }
 
@@ -801,7 +804,7 @@ class BydLeopard3Card extends HTMLElement {
     else if (act === 'alerts'){ this._alertsOpen = !this._alertsOpen; this._render(true); }
     else if (act === 'period'){ this._period = +el.dataset.p; await this._refreshTrips(); }
     else if (act === 'day'){ const k = el.dataset.day; const box = el.parentElement; this._open[k] = !box.classList.contains('open'); this._renderTrips(); }
-    else if (act === 'trip'){ this._sel = el.dataset.id; this._fitted = false; this._renderTrips(); await this._loadRoute(this._sel, true); }
+    else if (act === 'trip'){ this._sel = el.dataset.id; this._fitted = false; this._renderTrips(); await this._loadRoute(this._sel, true); this._renderTrips(); }
   }
 }
 

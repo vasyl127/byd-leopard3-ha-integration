@@ -108,3 +108,37 @@ async def test_trips_from_storage_are_migrated(hass: HomeAssistant, hass_storage
     await ws.send_json({"id": 1, "type": f"{DOMAIN}/trips", "entry_id": entry.entry_id, "days": 36500})
     trips = (await ws.receive_json())["result"]["trips"]
     assert [t["id"] for t in trips] == [t["id"] for t in old]
+
+
+def test_points_keep_power_and_old_db_migrates(tmp_path):
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    # an old database: points without a power column
+    c = sqlite3.connect(path)
+    c.executescript("CREATE TABLE points (entry_id TEXT NOT NULL, trip_id TEXT NOT NULL, t REAL NOT NULL, "
+                    "lat REAL NOT NULL, lon REAL NOT NULL, speed REAL);")
+    c.commit()
+    c.close()
+    db = HistoryDB(path)
+    db.open()
+    trip = _trip(0, 3)
+    for k, p in enumerate(trip["points"]):
+        p["power"] = [12.5, 18.0, -3.2][k]
+    db.add_trip("e1", trip)
+    assert [p["power"] for p in db.trip("e1", trip["id"])["points"]] == [12.5, 18.0, -3.2]
+
+
+def test_power_backfilled_from_samples_for_old_points(tmp_path):
+    db = HistoryDB(str(tmp_path / "h.db"))
+    db.open()
+    trip = _trip(1, 6)               # points t = start .. start+5, no power stored
+    s = trip["start"]
+    db.add_trip("e1", trip)
+    # samples hold only changes: 10 kW before the trip, 24 at +2, 30 at +4 (other keys ignored)
+    db.add_samples("e1", [(s - 600, {"power": 10.0, "soc": 80}), (s + 2, {"power": 24.0}), (s + 3, {"soc": 79}),
+                          (s + 4, {"power": 30.0})])
+    got = [p["power"] for p in db.trip("e1", trip["id"])["points"]]
+    assert got == [10.0, 10.0, 24.0, 24.0, 30.0, 30.0]
+    # no samples at all: power stays unknown
+    db.add_trip("e2", _trip(2, 3))
+    assert all(p["power"] is None for p in db.trip("e2", _trip(2, 3)["id"])["points"])

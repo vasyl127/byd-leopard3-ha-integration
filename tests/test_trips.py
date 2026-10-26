@@ -78,3 +78,22 @@ def test_energy_rules():
 def test_moving_time_skips_gaps():
     pts = [{"t": 0, "speed": 30}, {"t": 10, "speed": 30}, {"t": 500, "speed": 30}, {"t": 510, "speed": 0}, {"t": 520, "speed": 0}]
     assert moving_time(pts, 0, 520) == 20
+
+
+def test_points_carry_power_drawn_at_each_point():
+    done = []
+    rec = TripRecorder(72.9, done.append)
+    drive(rec, power=23.46)
+    pts = done[0]["points"]
+    moving = [p for p in pts if p["speed"] > 0]
+    assert moving and all(p["power"] == 23.5 for p in moving)
+
+
+def test_point_without_power_keeps_last_known_value():
+    rec = TripRecorder(72.9)
+    t = 0.0
+    for _ in range(40):                                   # start a trip at 40 km/h, 18 kW
+        rec.on_packet({"utc": t, "speed": 40, "power": 18.0, "lat": 50.0, "lon": 30.0 + t / 1e4})
+        t += 1
+    rec.on_packet({"utc": t, "speed": 40, "lat": 50.0, "lon": 30.1})   # GPS-only packet
+    assert rec.cur["points"][-1]["power"] == 18.0
