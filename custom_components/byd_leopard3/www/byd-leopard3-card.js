@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -246,6 +246,8 @@ const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS
 // Route colour by power drawn from the battery, kW (regen/negative counts as low). Unknown (no data) — grey.
 const POWER_BANDS = [[15, '#4fc3f7'], [22, '#66bb6a'], [27, '#ffca28'], [Infinity, '#ef5350']];
 const POWER_NA = '#8e8e93';
+// Trackpad pinch (ctrl+wheel) delta that makes one zoom step.
+const PINCH_STEP = 40;
 const powerColor = (kw) => kw == null || !isFinite(kw) ? POWER_NA : POWER_BANDS.find(([max]) => kw < max)[1];
 // Attributes that open the entity's more-info dialog (history graph) on click.
 const more = (eid) => eid ? ` data-act="more" data-e="${eid}" role="button" tabindex="0"` : '';
@@ -718,6 +720,22 @@ class BydLeopard3Card extends HTMLElement {
       if (z !== map.getZoom()) map.setZoomAround(g.p, z, {animate: false});
     }, opts);
     el.addEventListener('gestureend', (e) => { e.preventDefault(); g = null; }, opts);
+    // Chrome / Edge / Firefox on a trackpad report a pinch as a wheel event with ctrlKey (Ctrl + wheel on a mouse too).
+    // Ordinary scrolling (no ctrlKey) still scrolls the page, so the dashboard does not get stuck on the map.
+    let acc = 0, last = 0;
+    el.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now - last > 400) acc = 0;
+      last = now;
+      acc += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const step = acc <= -PINCH_STEP ? 1 : acc >= PINCH_STEP ? -1 : 0;
+      if (!step) return;
+      acc = 0;
+      const z = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + step));
+      if (z !== map.getZoom()) map.setZoomAround(map.mouseEventToContainerPoint(e), z);
+    }, opts);
   }
   _drawRoute(trip, fit){
     if (!this._map) return;
