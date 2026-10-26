@@ -3,7 +3,7 @@
  * Part of https://github.com/vasyl127/byd-leopard3-ha-integration (served by the integration itself).
  * Three layouts: car, trips, combo (car + trips in one card, side by side when the card is wide).
  */
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 const DOMAIN = 'byd_leopard3';
 const BASE = new URL('.', import.meta.url).href;
 // Version every asset URL like the card itself (…card.js?v=x.y.z), so browsers and proxies such as
@@ -700,7 +700,24 @@ class BydLeopard3Card extends HTMLElement {
     L.tileLayer(this._cfg.map_tiles || `${esri}World_${kind}_Gray_Base/MapServer/tile/{z}/{y}/{x}`, {maxNativeZoom: 16, maxZoom: 18, attribution: this._cfg.map_tiles ? '' : 'Tiles &copy; Esri'}).addTo(this._map);
     if (!this._cfg.map_tiles) L.tileLayer(`${esri}World_${kind}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, {maxNativeZoom: 16, maxZoom: 18}).addTo(this._map);
     this._routeLayer = L.layerGroup().addTo(this._map);
+    this._pinchZoom();
     new ResizeObserver(() => { this._map.invalidateSize({animate: false}); if (this._route) this._drawRoute(this._route, true); }).observe(this.$('map'));
+  }
+  /* Pinch-to-zoom on the map instead of the page. Leaflet handles pinch through pointer/touch events,
+     but WebKit (iOS Safari, the HA iOS app, macOS trackpads) also fires gesture* events and zooms the whole page.
+     Cancelling them keeps the page still; if Leaflet's own pinch is not running, the gesture drives the map zoom. */
+  _pinchZoom(){
+    const el = this.$('map'), map = this._map;
+    let g = null;
+    const opts = {passive: false};
+    el.addEventListener('gesturestart', (e) => { e.preventDefault(); g = {z: map.getZoom(), p: map.mouseEventToContainerPoint(e)}; }, opts);
+    el.addEventListener('gesturechange', (e) => {
+      e.preventDefault();
+      if (!g || map.touchZoom?._zooming || !(e.scale > 0)) return;
+      const z = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), Math.round(g.z + Math.log2(e.scale))));
+      if (z !== map.getZoom()) map.setZoomAround(g.p, z, {animate: false});
+    }, opts);
+    el.addEventListener('gestureend', (e) => { e.preventDefault(); g = null; }, opts);
   }
   _drawRoute(trip, fit){
     if (!this._map) return;
@@ -734,14 +751,7 @@ class BydLeopard3Card extends HTMLElement {
     const sum = (xs) => { const km = xs.reduce((a,x) => a + x.km, 0), kwh = xs.reduce((a,x) => a + (x.kwh ?? 0), 0); return {km, kwh, per100: km ? kwh/km*100 : null, n: xs.length}; };
     const s = sum(all);
     morph(this.$('thead'), `
-      <div class="tc-head"><h2>${t('trips')}</h2>
-        <div class="seg sm" role="group">
-          <button type="button" data-act="period" data-p="1" aria-pressed="${this._period === 1}">${t('today')}</button>
-          <button type="button" data-act="period" data-p="7" aria-pressed="${this._period === 7}">${t('week')}</button>
-          <button type="button" data-act="period" data-p="30" aria-pressed="${this._period === 30}">${t('month')}</button>
-          <button type="button" data-act="period" data-p="365" aria-pressed="${this._period === 365}">${t('year')}</button>
-          <button type="button" data-act="period" data-p="36500" aria-pressed="${this._period === 36500}">${t('all')}</button>
-        </div></div>
+      <div class="tc-head"><h2>${t('trips')}</h2></div>
       <div class="totals">
         <div><div class="k">${t('distance')}</div><div class="v">${nf(s.km,1)}<small>${t('km')}</small></div></div>
         <div><div class="k">${t('energy')}</div><div class="v">${nf(s.kwh,1)}<small>${t('kwh')}</small></div></div>
@@ -792,7 +802,16 @@ class BydLeopard3Card extends HTMLElement {
     }
     morph(this.$('tbody'), `
       ${this._cfg.show_trips_map === false ? '' : `<div class="legend"><span><i style="background:#4fc3f7"></i>${t('pw_low')}</span><span><i style="background:#66bb6a"></i>15–22</span><span><i style="background:#ffca28"></i>22–27</span><span><i style="background:#ef5350"></i>${t('pw_high')}</span>${this._route?.points?.some(p => p.power == null) ? `<span><i style="background:${POWER_NA}"></i>${t('pw_na')}</span>` : ''}</div>`}
-      ${detail}<div class="days">${days}</div>`);
+      ${detail}
+      <div class="periods">
+          <div class="seg sm" role="group">
+          <button type="button" data-act="period" data-p="1" aria-pressed="${this._period === 1}">${t('today')}</button>
+          <button type="button" data-act="period" data-p="7" aria-pressed="${this._period === 7}">${t('week')}</button>
+          <button type="button" data-act="period" data-p="30" aria-pressed="${this._period === 30}">${t('month')}</button>
+          <button type="button" data-act="period" data-p="365" aria-pressed="${this._period === 365}">${t('year')}</button>
+          <button type="button" data-act="period" data-p="36500" aria-pressed="${this._period === 36500}">${t('all')}</button>
+        </div></div>
+      <div class="days">${days}</div>`);
   }
 
   async _onClick(e){
@@ -1056,7 +1075,7 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .totals .k{color:var(--muted);font-size:11px}
 .totals .v{font-size:16px;font-weight:500;white-space:nowrap}
 .totals .v small{font-size:11px;color:var(--muted);font-weight:400;margin-left:2px}
-#map{height:250px;background:#191a1a;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#map{touch-action:none;height:250px;background:#191a1a;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .leaflet-container{font:12px Roboto,sans-serif;background:#191a1a}
 .leaflet-control-attribution{background:rgba(0,0,0,.55)!important;color:#888!important}
 .leaflet-control-attribution a{color:#aaa!important}
@@ -1070,6 +1089,7 @@ svg.i{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .detail .ttl span{color:var(--muted);font-size:12px}
 .mono{font-family:"Roboto Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .days{padding:6px 0 8px}
+.periods{display:flex;justify-content:center;padding:12px 16px 2px}
 .day{border-top:1px solid var(--line)}
 .day-h{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 16px;cursor:pointer;user-select:none}
 .day-h b{font-weight:500}
