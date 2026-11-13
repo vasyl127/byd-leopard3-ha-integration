@@ -1,0 +1,370 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BYD Leopard 3",
+        "description": "Verbind een auto die telemetrie naar een Home Assistant-webhook stuurt: BYDMate, BYD EV Pro of een andere app die JSON via POST kan versturen.",
+        "data": {
+          "name": "Naam",
+          "model": "Model",
+          "source": "Gegevensbron",
+          "field_map": "Veldtoewijzing (JSON, alleen voor aangepaste bronnen)"
+        },
+        "data_description": {
+          "field_map": "Voorbeeld: `{example}`. Zie de README voor paden, schaal en waardetoewijzingen."
+        }
+      },
+      "webhook": {
+        "title": "Webhook-URL",
+        "description": "Plak deze URL in je app (in BYDMate: Settings → Integrations → Webhook: telemetry, zet daarna Live data → your own server aan). De auto verschijnt zodra het eerste pakket binnenkomt.\n\n`{webhook_url}`"
+      }
+    },
+    "error": {
+      "invalid_json": "De veldtoewijzing is geen geldig JSON-object."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BYD Leopard 3",
+        "description": "Webhook-URL: `{webhook_url}`",
+        "data": {
+          "model": "Model",
+          "source": "Gegevensbron",
+          "capacity": "Accucapaciteit overschrijven",
+          "offline_after": "Offline na",
+          "record_trips": "Ritten vastleggen",
+          "history_days": "Telemetriegeschiedenis bewaren (dagen)",
+          "webhook_secret": "Webhook-geheim (optioneel)",
+          "field_map": "Veldtoewijzing (JSON)"
+        },
+        "data_description": {
+          "webhook_secret": "Indien ingesteld, moeten verzoeken Authorization: Bearer SECRET (het veld Secret in BYDMate) of X-Webhook-Signature = HMAC-SHA256(body) bevatten.",
+          "capacity": "Laat leeg om de capaciteit van het model te gebruiken.",
+          "history_days": "Telemetriegegevens in byd_leopard3.db die ouder zijn, worden verwijderd. 0 bewaart alles. Ritten en routes worden altijd bewaard."
+        }
+      }
+    },
+    "error": {
+      "invalid_json": "De veldtoewijzing is geen geldig JSON-object."
+    }
+  },
+  "selector": {
+    "model": {
+      "options": {
+        "leopard3": "Leopard 3 / Tai 3",
+        "seal": "Seal",
+        "seal_u": "Seal U / Song Plus",
+        "atto3": "Atto 3 / Yuan Plus",
+        "dolphin": "Dolphin",
+        "han": "Han",
+        "tang": "Tang",
+        "other": "Andere BYD"
+      }
+    },
+    "source": {
+      "options": {
+        "auto": "Automatisch detecteren",
+        "abrp": "BYDMate / ABRP (Iternio) telemetrie",
+        "byd_ev_pro": "BYD EV Pro",
+        "generic": "Generieke JSON (sleutelnamen van deze integratie)",
+        "custom": "Aangepaste JSON met veldtoewijzing"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "Accuniveau"
+      },
+      "soh": {
+        "name": "Accugezondheid"
+      },
+      "range": {
+        "name": "Bereik"
+      },
+      "power": {
+        "name": "Accuvermogen"
+      },
+      "voltage": {
+        "name": "Accuspanning"
+      },
+      "current": {
+        "name": "Accustroom"
+      },
+      "batt_temp": {
+        "name": "Accutemperatuur"
+      },
+      "batt_temp_min": {
+        "name": "Min. accutemperatuur"
+      },
+      "batt_temp_max": {
+        "name": "Max. accutemperatuur"
+      },
+      "capacity": {
+        "name": "Accucapaciteit"
+      },
+      "kwh_charged": {
+        "name": "Geladen deze sessie"
+      },
+      "speed": {
+        "name": "Snelheid"
+      },
+      "odometer": {
+        "name": "Kilometerstand"
+      },
+      "cabin_temp": {
+        "name": "Interieurtemperatuur"
+      },
+      "ext_temp": {
+        "name": "Buitentemperatuur"
+      },
+      "hvac_setpoint": {
+        "name": "Ingestelde klimaattemperatuur"
+      },
+      "aux_voltage": {
+        "name": "12V-accu"
+      },
+      "cell_max_v": {
+        "name": "Max. celspanning"
+      },
+      "cell_min_v": {
+        "name": "Min. celspanning"
+      },
+      "front_motor_temp": {
+        "name": "Temperatuur voormotor"
+      },
+      "rear_motor_temp": {
+        "name": "Temperatuur achtermotor"
+      },
+      "motor_rpm": {
+        "name": "Toerental voormotor"
+      },
+      "sunroof_pos": {
+        "name": "Positie schuifdak"
+      },
+      "vehicle_state": {
+        "name": "Voertuigstatus"
+      },
+      "fan_speed": {
+        "name": "Ventilatorsnelheid"
+      },
+      "last_update": {
+        "name": "Laatste update"
+      },
+      "last_trip": {
+        "name": "Laatste rit"
+      },
+      "tyre_pressure_fl": {
+        "name": "Bandenspanning linksvoor"
+      },
+      "tyre_temp_fl": {
+        "name": "Bandentemperatuur linksvoor"
+      },
+      "window_fl": {
+        "name": "Raam linksvoor"
+      },
+      "tyre_pressure_fr": {
+        "name": "Bandenspanning rechtsvoor"
+      },
+      "tyre_temp_fr": {
+        "name": "Bandentemperatuur rechtsvoor"
+      },
+      "window_fr": {
+        "name": "Raam rechtsvoor"
+      },
+      "tyre_pressure_rl": {
+        "name": "Bandenspanning linksachter"
+      },
+      "tyre_temp_rl": {
+        "name": "Bandentemperatuur linksachter"
+      },
+      "window_rl": {
+        "name": "Raam linksachter"
+      },
+      "tyre_pressure_rr": {
+        "name": "Bandenspanning rechtsachter"
+      },
+      "tyre_temp_rr": {
+        "name": "Bandentemperatuur rechtsachter"
+      },
+      "window_rr": {
+        "name": "Raam rechtsachter"
+      },
+      "charging_gun": {
+        "name": "Laadstekker",
+        "state": {
+          "disconnected": "Losgekoppeld",
+          "ac": "AC",
+          "dc": "DC"
+        }
+      },
+      "climate": {
+        "name": "Klimaat",
+        "state": {
+          "on": "Aan",
+          "off": "Uit"
+        }
+      },
+      "seat_heat": {
+        "name": "Stoelverwarming bestuurder",
+        "state": {
+          "off": "Uit",
+          "level_1": "Stand 1",
+          "level_2": "Stand 2"
+        }
+      },
+      "steering_heat": {
+        "name": "Stuurverwarming",
+        "state": {
+          "off": "Uit",
+          "on": "Aan"
+        }
+      },
+      "hood": {
+        "name": "Motorkap",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      },
+      "trunk": {
+        "name": "Kofferbak",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      },
+      "sunroof": {
+        "name": "Schuifdak",
+        "state": {
+          "not_equipped": "Niet aanwezig",
+          "closed": "Gesloten",
+          "open": "Open",
+          "opening": "Gaat open",
+          "closing": "Gaat dicht"
+        }
+      },
+      "sunshade": {
+        "name": "Zonnescherm",
+        "state": {
+          "not_equipped": "Niet aanwezig",
+          "closed": "Gesloten",
+          "open": "Open",
+          "opening": "Gaat open",
+          "closing": "Gaat dicht"
+        }
+      },
+      "tyre_state_fl": {
+        "name": "Bandenstatus linksvoor",
+        "state": {
+          "normal": "Normaal",
+          "low": "Laag",
+          "high": "Hoog"
+        }
+      },
+      "lock_fl": {
+        "name": "Slot bestuurdersportier",
+        "state": {
+          "locked": "Vergrendeld",
+          "unlocked": "Ontgrendeld"
+        }
+      },
+      "door_fl": {
+        "name": "Bestuurdersportier",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      },
+      "tyre_state_fr": {
+        "name": "Bandenstatus rechtsvoor",
+        "state": {
+          "normal": "Normaal",
+          "low": "Laag",
+          "high": "Hoog"
+        }
+      },
+      "lock_fr": {
+        "name": "Slot passagiersportier",
+        "state": {
+          "locked": "Vergrendeld",
+          "unlocked": "Ontgrendeld"
+        }
+      },
+      "door_fr": {
+        "name": "Passagiersportier",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      },
+      "tyre_state_rl": {
+        "name": "Bandenstatus linksachter",
+        "state": {
+          "normal": "Normaal",
+          "low": "Laag",
+          "high": "Hoog"
+        }
+      },
+      "lock_rl": {
+        "name": "Slot portier linksachter",
+        "state": {
+          "locked": "Vergrendeld",
+          "unlocked": "Ontgrendeld"
+        }
+      },
+      "door_rl": {
+        "name": "Portier linksachter",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      },
+      "tyre_state_rr": {
+        "name": "Bandenstatus rechtsachter",
+        "state": {
+          "normal": "Normaal",
+          "low": "Laag",
+          "high": "Hoog"
+        }
+      },
+      "lock_rr": {
+        "name": "Slot portier rechtsachter",
+        "state": {
+          "locked": "Vergrendeld",
+          "unlocked": "Ontgrendeld"
+        }
+      },
+      "door_rr": {
+        "name": "Portier rechtsachter",
+        "state": {
+          "open": "Open",
+          "closed": "Gesloten"
+        }
+      }
+    },
+    "binary_sensor": {
+      "is_charging": {
+        "name": "Laden"
+      },
+      "is_dcfc": {
+        "name": "DC-snelladen"
+      },
+      "is_parked": {
+        "name": "Geparkeerd"
+      },
+      "online": {
+        "name": "Online"
+      },
+      "trip_in_progress": {
+        "name": "Rit bezig"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "Locatie"
+      }
+    }
+  }
+}

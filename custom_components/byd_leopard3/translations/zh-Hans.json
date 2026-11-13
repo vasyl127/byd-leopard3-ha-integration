@@ -1,0 +1,370 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BYD Leopard 3",
+        "description": "连接向 Home Assistant webhook 发送遥测数据的车辆：BYDMate、BYD EV Pro 或任何可以 POST JSON 的应用。",
+        "data": {
+          "name": "名称",
+          "model": "车型",
+          "source": "数据源",
+          "field_map": "字段映射（JSON，仅用于自定义数据源）"
+        },
+        "data_description": {
+          "field_map": "示例：`{example}`。路径、缩放和值映射请参阅 README。"
+        }
+      },
+      "webhook": {
+        "title": "Webhook URL",
+        "description": "将此 URL 粘贴到您的应用中（BYDMate：Settings → Integrations → Webhook: telemetry，然后开启 Live data → your own server）。收到第一个数据包后车辆就会出现。\n\n`{webhook_url}`"
+      }
+    },
+    "error": {
+      "invalid_json": "字段映射不是有效的 JSON 对象。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BYD Leopard 3",
+        "description": "Webhook URL：`{webhook_url}`",
+        "data": {
+          "model": "车型",
+          "source": "数据源",
+          "capacity": "自定义电池容量",
+          "offline_after": "离线判定时间",
+          "record_trips": "记录行程",
+          "history_days": "遥测历史保留天数",
+          "webhook_secret": "Webhook 密钥（可选）",
+          "field_map": "字段映射（JSON）"
+        },
+        "data_description": {
+          "webhook_secret": "设置后，请求必须携带 Authorization: Bearer SECRET（BYDMate 中的 Secret 字段）或 X-Webhook-Signature = HMAC-SHA256(body)。",
+          "capacity": "留空则使用车型的容量。",
+          "history_days": "byd_leopard3.db 中早于此时间的遥测数据将被删除。0 表示全部保留。行程和路线始终保留。"
+        }
+      }
+    },
+    "error": {
+      "invalid_json": "字段映射不是有效的 JSON 对象。"
+    }
+  },
+  "selector": {
+    "model": {
+      "options": {
+        "leopard3": "Leopard 3 / 方程豹 钛3",
+        "seal": "海豹",
+        "seal_u": "Seal U / 宋 Plus",
+        "atto3": "Atto 3 / 元 Plus",
+        "dolphin": "海豚",
+        "han": "汉",
+        "tang": "唐",
+        "other": "其他 BYD"
+      }
+    },
+    "source": {
+      "options": {
+        "auto": "自动检测",
+        "abrp": "BYDMate / ABRP（Iternio）遥测",
+        "byd_ev_pro": "BYD EV Pro",
+        "generic": "通用 JSON（本集成的键名）",
+        "custom": "带字段映射的自定义 JSON"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "电池电量"
+      },
+      "soh": {
+        "name": "电池健康度"
+      },
+      "range": {
+        "name": "续航"
+      },
+      "power": {
+        "name": "电池功率"
+      },
+      "voltage": {
+        "name": "电池电压"
+      },
+      "current": {
+        "name": "电池电流"
+      },
+      "batt_temp": {
+        "name": "电池温度"
+      },
+      "batt_temp_min": {
+        "name": "电池最低温度"
+      },
+      "batt_temp_max": {
+        "name": "电池最高温度"
+      },
+      "capacity": {
+        "name": "电池容量"
+      },
+      "kwh_charged": {
+        "name": "本次充电量"
+      },
+      "speed": {
+        "name": "车速"
+      },
+      "odometer": {
+        "name": "总里程"
+      },
+      "cabin_temp": {
+        "name": "车内温度"
+      },
+      "ext_temp": {
+        "name": "车外温度"
+      },
+      "hvac_setpoint": {
+        "name": "空调设定温度"
+      },
+      "aux_voltage": {
+        "name": "12V 蓄电池"
+      },
+      "cell_max_v": {
+        "name": "电芯最高电压"
+      },
+      "cell_min_v": {
+        "name": "电芯最低电压"
+      },
+      "front_motor_temp": {
+        "name": "前电机温度"
+      },
+      "rear_motor_temp": {
+        "name": "后电机温度"
+      },
+      "motor_rpm": {
+        "name": "前电机转速"
+      },
+      "sunroof_pos": {
+        "name": "天窗位置"
+      },
+      "vehicle_state": {
+        "name": "车辆状态"
+      },
+      "fan_speed": {
+        "name": "风量"
+      },
+      "last_update": {
+        "name": "最后更新"
+      },
+      "last_trip": {
+        "name": "上次行程"
+      },
+      "tyre_pressure_fl": {
+        "name": "左前胎压"
+      },
+      "tyre_temp_fl": {
+        "name": "左前胎温"
+      },
+      "window_fl": {
+        "name": "左前车窗"
+      },
+      "tyre_pressure_fr": {
+        "name": "右前胎压"
+      },
+      "tyre_temp_fr": {
+        "name": "右前胎温"
+      },
+      "window_fr": {
+        "name": "右前车窗"
+      },
+      "tyre_pressure_rl": {
+        "name": "左后胎压"
+      },
+      "tyre_temp_rl": {
+        "name": "左后胎温"
+      },
+      "window_rl": {
+        "name": "左后车窗"
+      },
+      "tyre_pressure_rr": {
+        "name": "右后胎压"
+      },
+      "tyre_temp_rr": {
+        "name": "右后胎温"
+      },
+      "window_rr": {
+        "name": "右后车窗"
+      },
+      "charging_gun": {
+        "name": "充电枪",
+        "state": {
+          "disconnected": "未连接",
+          "ac": "交流",
+          "dc": "直流"
+        }
+      },
+      "climate": {
+        "name": "空调",
+        "state": {
+          "on": "开启",
+          "off": "关闭"
+        }
+      },
+      "seat_heat": {
+        "name": "主驾座椅加热",
+        "state": {
+          "off": "关闭",
+          "level_1": "1 档",
+          "level_2": "2 档"
+        }
+      },
+      "steering_heat": {
+        "name": "方向盘加热",
+        "state": {
+          "off": "关闭",
+          "on": "开启"
+        }
+      },
+      "hood": {
+        "name": "前舱盖",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      },
+      "trunk": {
+        "name": "后备箱",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      },
+      "sunroof": {
+        "name": "天窗",
+        "state": {
+          "not_equipped": "未配备",
+          "closed": "关闭",
+          "open": "打开",
+          "opening": "正在打开",
+          "closing": "正在关闭"
+        }
+      },
+      "sunshade": {
+        "name": "遮阳帘",
+        "state": {
+          "not_equipped": "未配备",
+          "closed": "关闭",
+          "open": "打开",
+          "opening": "正在打开",
+          "closing": "正在关闭"
+        }
+      },
+      "tyre_state_fl": {
+        "name": "左前轮胎状态",
+        "state": {
+          "normal": "正常",
+          "low": "偏低",
+          "high": "偏高"
+        }
+      },
+      "lock_fl": {
+        "name": "主驾车门锁",
+        "state": {
+          "locked": "已上锁",
+          "unlocked": "未上锁"
+        }
+      },
+      "door_fl": {
+        "name": "主驾车门",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      },
+      "tyre_state_fr": {
+        "name": "右前轮胎状态",
+        "state": {
+          "normal": "正常",
+          "low": "偏低",
+          "high": "偏高"
+        }
+      },
+      "lock_fr": {
+        "name": "副驾车门锁",
+        "state": {
+          "locked": "已上锁",
+          "unlocked": "未上锁"
+        }
+      },
+      "door_fr": {
+        "name": "副驾车门",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      },
+      "tyre_state_rl": {
+        "name": "左后轮胎状态",
+        "state": {
+          "normal": "正常",
+          "low": "偏低",
+          "high": "偏高"
+        }
+      },
+      "lock_rl": {
+        "name": "左后车门锁",
+        "state": {
+          "locked": "已上锁",
+          "unlocked": "未上锁"
+        }
+      },
+      "door_rl": {
+        "name": "左后车门",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      },
+      "tyre_state_rr": {
+        "name": "右后轮胎状态",
+        "state": {
+          "normal": "正常",
+          "low": "偏低",
+          "high": "偏高"
+        }
+      },
+      "lock_rr": {
+        "name": "右后车门锁",
+        "state": {
+          "locked": "已上锁",
+          "unlocked": "未上锁"
+        }
+      },
+      "door_rr": {
+        "name": "右后车门",
+        "state": {
+          "open": "打开",
+          "closed": "关闭"
+        }
+      }
+    },
+    "binary_sensor": {
+      "is_charging": {
+        "name": "充电中"
+      },
+      "is_dcfc": {
+        "name": "直流快充"
+      },
+      "is_parked": {
+        "name": "已驻车"
+      },
+      "online": {
+        "name": "在线"
+      },
+      "trip_in_progress": {
+        "name": "行程进行中"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "位置"
+      }
+    }
+  }
+}

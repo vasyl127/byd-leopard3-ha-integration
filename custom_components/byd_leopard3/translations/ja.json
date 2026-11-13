@@ -1,0 +1,370 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BYD Leopard 3",
+        "description": "Home Assistant の Webhook にテレメトリを送信する車両を接続します: BYDMate、BYD EV Pro、または JSON を POST できる任意のアプリ。",
+        "data": {
+          "name": "名前",
+          "model": "モデル",
+          "source": "データソース",
+          "field_map": "フィールドマップ（JSON、カスタムソースのみ）"
+        },
+        "data_description": {
+          "field_map": "例: `{example}`。パス、スケール、値マップについては README を参照してください。"
+        }
+      },
+      "webhook": {
+        "title": "Webhook URL",
+        "description": "この URL をアプリに貼り付けてください（BYDMate の場合: Settings → Integrations → Webhook: telemetry、次に Live data → your own server をオンにします）。最初のパケットが届くと車両が表示されます。\n\n`{webhook_url}`"
+      }
+    },
+    "error": {
+      "invalid_json": "フィールドマップが有効な JSON オブジェクトではありません。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BYD Leopard 3",
+        "description": "Webhook URL: `{webhook_url}`",
+        "data": {
+          "model": "モデル",
+          "source": "データソース",
+          "capacity": "バッテリー容量の上書き",
+          "offline_after": "オフライン判定時間",
+          "record_trips": "走行を記録",
+          "history_days": "テレメトリ履歴の保持（日）",
+          "webhook_secret": "Webhook シークレット（任意）",
+          "field_map": "フィールドマップ（JSON）"
+        },
+        "data_description": {
+          "webhook_secret": "設定すると、リクエストには Authorization: Bearer SECRET（BYDMate の Secret 欄）または X-Webhook-Signature = HMAC-SHA256(body) が必要になります。",
+          "capacity": "空欄にするとモデルの容量を使用します。",
+          "history_days": "byd_leopard3.db 内のこれより古いテレメトリは削除されます。0 ですべて保持します。走行とルートは常に保持されます。"
+        }
+      }
+    },
+    "error": {
+      "invalid_json": "フィールドマップが有効な JSON オブジェクトではありません。"
+    }
+  },
+  "selector": {
+    "model": {
+      "options": {
+        "leopard3": "Leopard 3 / Tai 3",
+        "seal": "Seal",
+        "seal_u": "Seal U / Song Plus",
+        "atto3": "Atto 3 / Yuan Plus",
+        "dolphin": "Dolphin",
+        "han": "Han",
+        "tang": "Tang",
+        "other": "その他の BYD"
+      }
+    },
+    "source": {
+      "options": {
+        "auto": "自動検出",
+        "abrp": "BYDMate / ABRP（Iternio）テレメトリ",
+        "byd_ev_pro": "BYD EV Pro",
+        "generic": "汎用 JSON（この統合のキー名）",
+        "custom": "フィールドマップ付きカスタム JSON"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "soc": {
+        "name": "バッテリー残量"
+      },
+      "soh": {
+        "name": "バッテリー劣化度"
+      },
+      "range": {
+        "name": "航続距離"
+      },
+      "power": {
+        "name": "バッテリー電力"
+      },
+      "voltage": {
+        "name": "バッテリー電圧"
+      },
+      "current": {
+        "name": "バッテリー電流"
+      },
+      "batt_temp": {
+        "name": "バッテリー温度"
+      },
+      "batt_temp_min": {
+        "name": "バッテリー最低温度"
+      },
+      "batt_temp_max": {
+        "name": "バッテリー最高温度"
+      },
+      "capacity": {
+        "name": "バッテリー容量"
+      },
+      "kwh_charged": {
+        "name": "今回の充電量"
+      },
+      "speed": {
+        "name": "速度"
+      },
+      "odometer": {
+        "name": "走行距離計"
+      },
+      "cabin_temp": {
+        "name": "車内温度"
+      },
+      "ext_temp": {
+        "name": "外気温"
+      },
+      "hvac_setpoint": {
+        "name": "空調設定温度"
+      },
+      "aux_voltage": {
+        "name": "12V バッテリー"
+      },
+      "cell_max_v": {
+        "name": "セル最高電圧"
+      },
+      "cell_min_v": {
+        "name": "セル最低電圧"
+      },
+      "front_motor_temp": {
+        "name": "フロントモーター温度"
+      },
+      "rear_motor_temp": {
+        "name": "リアモーター温度"
+      },
+      "motor_rpm": {
+        "name": "フロントモーター回転数"
+      },
+      "sunroof_pos": {
+        "name": "サンルーフ位置"
+      },
+      "vehicle_state": {
+        "name": "車両状態"
+      },
+      "fan_speed": {
+        "name": "ファン速度"
+      },
+      "last_update": {
+        "name": "最終更新"
+      },
+      "last_trip": {
+        "name": "前回の走行"
+      },
+      "tyre_pressure_fl": {
+        "name": "左前タイヤ空気圧"
+      },
+      "tyre_temp_fl": {
+        "name": "左前タイヤ温度"
+      },
+      "window_fl": {
+        "name": "左前ウィンドウ"
+      },
+      "tyre_pressure_fr": {
+        "name": "右前タイヤ空気圧"
+      },
+      "tyre_temp_fr": {
+        "name": "右前タイヤ温度"
+      },
+      "window_fr": {
+        "name": "右前ウィンドウ"
+      },
+      "tyre_pressure_rl": {
+        "name": "左後タイヤ空気圧"
+      },
+      "tyre_temp_rl": {
+        "name": "左後タイヤ温度"
+      },
+      "window_rl": {
+        "name": "左後ウィンドウ"
+      },
+      "tyre_pressure_rr": {
+        "name": "右後タイヤ空気圧"
+      },
+      "tyre_temp_rr": {
+        "name": "右後タイヤ温度"
+      },
+      "window_rr": {
+        "name": "右後ウィンドウ"
+      },
+      "charging_gun": {
+        "name": "充電プラグ",
+        "state": {
+          "disconnected": "未接続",
+          "ac": "AC",
+          "dc": "DC"
+        }
+      },
+      "climate": {
+        "name": "空調",
+        "state": {
+          "on": "オン",
+          "off": "オフ"
+        }
+      },
+      "seat_heat": {
+        "name": "運転席ヒーター",
+        "state": {
+          "off": "オフ",
+          "level_1": "レベル 1",
+          "level_2": "レベル 2"
+        }
+      },
+      "steering_heat": {
+        "name": "ステアリングヒーター",
+        "state": {
+          "off": "オフ",
+          "on": "オン"
+        }
+      },
+      "hood": {
+        "name": "ボンネット",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      },
+      "trunk": {
+        "name": "トランク",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      },
+      "sunroof": {
+        "name": "サンルーフ",
+        "state": {
+          "not_equipped": "非装備",
+          "closed": "閉",
+          "open": "開",
+          "opening": "開いています",
+          "closing": "閉じています"
+        }
+      },
+      "sunshade": {
+        "name": "サンシェード",
+        "state": {
+          "not_equipped": "非装備",
+          "closed": "閉",
+          "open": "開",
+          "opening": "開いています",
+          "closing": "閉じています"
+        }
+      },
+      "tyre_state_fl": {
+        "name": "左前タイヤ状態",
+        "state": {
+          "normal": "正常",
+          "low": "低",
+          "high": "高"
+        }
+      },
+      "lock_fl": {
+        "name": "運転席ドアロック",
+        "state": {
+          "locked": "施錠",
+          "unlocked": "解錠"
+        }
+      },
+      "door_fl": {
+        "name": "運転席ドア",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      },
+      "tyre_state_fr": {
+        "name": "右前タイヤ状態",
+        "state": {
+          "normal": "正常",
+          "low": "低",
+          "high": "高"
+        }
+      },
+      "lock_fr": {
+        "name": "助手席ドアロック",
+        "state": {
+          "locked": "施錠",
+          "unlocked": "解錠"
+        }
+      },
+      "door_fr": {
+        "name": "助手席ドア",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      },
+      "tyre_state_rl": {
+        "name": "左後タイヤ状態",
+        "state": {
+          "normal": "正常",
+          "low": "低",
+          "high": "高"
+        }
+      },
+      "lock_rl": {
+        "name": "左後ドアロック",
+        "state": {
+          "locked": "施錠",
+          "unlocked": "解錠"
+        }
+      },
+      "door_rl": {
+        "name": "左後ドア",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      },
+      "tyre_state_rr": {
+        "name": "右後タイヤ状態",
+        "state": {
+          "normal": "正常",
+          "low": "低",
+          "high": "高"
+        }
+      },
+      "lock_rr": {
+        "name": "右後ドアロック",
+        "state": {
+          "locked": "施錠",
+          "unlocked": "解錠"
+        }
+      },
+      "door_rr": {
+        "name": "右後ドア",
+        "state": {
+          "open": "開",
+          "closed": "閉"
+        }
+      }
+    },
+    "binary_sensor": {
+      "is_charging": {
+        "name": "充電中"
+      },
+      "is_dcfc": {
+        "name": "DC 急速充電"
+      },
+      "is_parked": {
+        "name": "駐車中"
+      },
+      "online": {
+        "name": "オンライン"
+      },
+      "trip_in_progress": {
+        "name": "走行中"
+      }
+    },
+    "device_tracker": {
+      "location": {
+        "name": "位置"
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
 ## Features
 
 - **Any source.** BYDMate (Iternio/ABRP format), BYD EV Pro, a generic JSON format, or any JSON with a field map. The format is detected automatically.
-- **Entities appear on their own** for the values your car actually sends: battery, charging, climate, tyres, doors, locks, windows, location and more. 60+ possible entities, translated to English and Ukrainian.
+- **Entities appear on their own** for the values your car actually sends: battery, charging, climate, tyres, doors, locks, windows, location and more. 60+ possible entities, translated to English, Ukrainian, German, Spanish, French, Italian, Dutch, Polish, Portuguese (Brazil), Chinese (Simplified) and Japanese.
 - **Trips** are recorded inside Home Assistant with the logic from BYDMate: start after 5 s above 3 km/h, end after 3 min at standstill, distance from the odometer (GPS fallback), energy from integrated power with BYDMate's plausibility checks, moving time without GPS gaps.
 - **Long-term history** in a local SQLite database (`config/byd_leopard3.db`): every trip with its full GPS route, kept forever, plus telemetry samples (every 10 s while driving or charging, every 60 s when parked, only values that changed) kept for 365 days by default. It survives restarts and goes into Home Assistant backups. Trips from version 1.0 are moved in automatically.
 - **Online / offline**: a connectivity sensor turns off when packets stop.
@@ -32,7 +32,7 @@ Built for the Leopard 3 (Fangchengbao Tai 3), but it works with any BYD and with
   - offline view hides stale values and shows when the last packet came;
   - car colour: the factory Leopard 3 / Tai 3 colours (Obsidian Black, Element White, Starry Moon Silver, Mineral Green, Micro Light Pink, Ice Crystal Blue, Stardust Purple) or any custom colour;
   - 15 [themes](#themes): *same as Home Assistant*, Dark, Light, Midnight, Graphite, OLED, Mineral and the styled Claude CLI, Tesla, Gradient Glass, Neon, Paper, Off-road, iOS, iOS Dark; every colour of a theme can be changed in the editor;
-  - English and Ukrainian, configured in the visual editor.
+  - 11 languages (English, Ukrainian, German, Spanish, French, Italian, Dutch, Polish, Portuguese, Chinese, Japanese), configured in the visual editor; *auto* follows your Home Assistant language.
 
 ## Themes
 
@@ -167,7 +167,7 @@ All of them are in the visual editor. YAML equivalent:
 type: custom:byd-leopard3-card
 entry_id: 01J...            # which car (optional when you have one)
 layout: combo               # car | trips | combo
-language: auto              # auto | uk | en
+language: auto              # auto | en | uk | de | es | fr | it | nl | pl | pt | zh | ja
 color: green                # black | white | silver | green | pink | ice_blue | purple | custom
 custom_color: [233, 30, 99] # with color: custom
 theme: midnight             # ha | dark | light | midnight | graphite | oled | mineral |
@@ -236,7 +236,7 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 ### Що вміє
 
 - Автоматично визначає формат даних: BYDMate, BYD EV Pro, загальний JSON або будь-який JSON через мапу полів.
-- Створює лише ті датчики, які авто справді надсилає. Назви датчиків перекладені англійською та українською.
+- Створює лише ті датчики, які авто справді надсилає. Назви датчиків і картка перекладені 11 мовами: англійська, українська, німецька, іспанська, французька, італійська, нідерландська, польська, португальська (Бразилія), китайська (спрощена) та японська.
 - Записує поїздки за логікою BYDMate у локальну базу SQLite (`config/byd_leopard3.db`): усі поїздки з повними GPS-маршрутами зберігаються назавжди, телеметрія — 365 днів (змінюється в параметрах інтеграції, `0` — без обмеження). Дані переживають перезапуск і потрапляють у бекапи HA. У картці є періоди «Рік» і «Все».
 - Картка має три варіанти: авто, поїздки, комплект. Комплект на широкому екрані показує поїздки справа, а на телефоні знизу.
 - Натисни на будь-яке значення (заряд, потужність, температури, шини, замки, пробіг…), і відкриється його графік історії, як у звичайного сенсора HA.
