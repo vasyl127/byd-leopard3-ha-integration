@@ -110,6 +110,40 @@ async def test_options_flow(hass: HomeAssistant):
     assert result["errors"] == {"field_map": "invalid_json"}
 
 
+async def test_cloudhook_mock_request(hass: HomeAssistant):
+    """Nabu Casa Cloudhooks hand the webhook a MockRequest without `read()`."""
+    import hashlib
+    import hmac
+    import json
+
+    from homeassistant.components.webhook import async_handle_webhook
+    from homeassistant.util.aiohttp import MockRequest
+
+    entry = await _setup(hass)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "webhook_secret": "s3cret"})
+    await hass.async_block_till_done()
+    wid = entry.data["webhook_id"]
+    body = json.dumps(BYDMATE).encode()
+
+    def req(headers):
+        return MockRequest(content=body, mock_source="cloudhook", method="POST",
+                           headers={"content-type": "application/json", **headers})
+
+    resp = await async_handle_webhook(hass, wid, req({"Authorization": "Bearer wrong"}))
+    assert resp.status == 403
+    resp = await async_handle_webhook(hass, wid, req({"Authorization": "Bearer s3cret"}))
+    assert resp.status == 200
+    sig = hmac.new(b"s3cret", body, hashlib.sha256).hexdigest()
+    resp = await async_handle_webhook(hass, wid, req({"X-Webhook-Signature": sig}))
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    reg = er.async_get(hass)
+    soc = next(e.entity_id for e in er.async_entries_for_config_entry(reg, entry.entry_id)
+               if e.unique_id.endswith("_soc"))
+    assert float(hass.states.get(soc).state) == 20
+
+
 async def test_tracker_battery_without_deprecated_property(hass: HomeAssistant, hass_client_no_auth):
     """battery_level stays a tracker attribute, but not via the deprecated property."""
     from custom_components.byd_leopard3.device_tracker import Location
