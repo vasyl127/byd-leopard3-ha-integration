@@ -3,7 +3,11 @@ name: Validate
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "0 0 * * *"
   workflow_dispatch:
+
+permissions: {}
 
 jobs:
   hassfest:
@@ -18,7 +22,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          ignore: brands
 
   tests:
     runs-on: ubuntu-latest

@@ -2,7 +2,7 @@
 
 # BYD Leopard 3 for Home Assistant
 
-[![hacs](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![Marketplace](https://img.shields.io/badge/Home%20Assistant-Marketplace-41BDF5.svg)](https://www.home-assistant.io/integrations/marketplace/#custom-repositories)
 [![Validate](https://github.com/vasyl127/byd-leopard3-ha-integration/actions/workflows/validate.yml/badge.svg)](https://github.com/vasyl127/byd-leopard3-ha-integration/actions/workflows/validate.yml)
 
 Telemetry from your BYD in Home Assistant, pushed by the car over a webhook, plus a dashboard card with charging forecast, alerts, an animated car and a trip log on a map.
@@ -57,19 +57,31 @@ Screenshots: combined layout, AC charging, rendered with `dev/harness.html`.
 
 ## Install
 
-### HACS (recommended)
+<!-- ha-marketplace:exclude-start -->
+### Marketplace (Home Assistant 2026.11+, recommended)
+
+[![Open in the Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=vasyl127&repository=byd-leopard3-ha-integration&category=integration)
+
+Or by hand:
+
+1. **Settings → Marketplace → Add from link** → `vasyl127/byd-leopard3-ha-integration` (type **Integration**, if asked).
+2. Open **BYD Leopard 3** and install it.
+3. Add the integration (see [Set up](#set-up)). An update needs a restart; the Marketplace offers it under **Settings → Repairs**.
+
+If you installed it through HACS before, nothing to do: Home Assistant 2026.11 moves it into the Marketplace, and updates keep coming.
+
+### HACS (Home Assistant before 2026.11)
 
 1. HACS → ⋮ → **Custom repositories** → add `https://github.com/vasyl127/byd-leopard3-ha-integration`, type **Integration**.
 2. Find **BYD Leopard 3** in HACS and download it.
 3. Restart Home Assistant.
 
-Requires Home Assistant 2024.11 or newer.
-
-[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=vasyl127&repository=byd-leopard3-ha-integration&category=integration)
-
 ### Manual
 
 Copy `custom_components/byd_leopard3` into your `config/custom_components/` and restart.
+<!-- ha-marketplace:exclude-end -->
+
+Requires Home Assistant 2024.11 or newer.
 
 ## Set up
 
@@ -214,8 +226,8 @@ uv venv --python 3.13 .venv && VIRTUAL_ENV=.venv uv pip install -r requirements_
 
 ### Встановлення
 
-1. HACS → ⋮ → **Custom repositories** → `https://github.com/vasyl127/byd-leopard3-ha-integration`, тип **Integration**.
-2. Знайди **BYD Leopard 3** у HACS, завантаж і перезапусти Home Assistant.
+1. **Налаштування → Marketplace → Add from link** → `vasyl127/byd-leopard3-ha-integration` (тип **Integration**, якщо спитає), або кнопка *Open in the Marketplace* вище. Відкрий **BYD Leopard 3** і встанови. На Home Assistant до 2026.11 — через HACS: ⋮ → **Custom repositories** → `https://github.com/vasyl127/byd-leopard3-ha-integration`, тип **Integration**, завантаж і перезапусти HA. Якщо вже ставив через HACS, у 2026.11 інтеграція сама переїде в Marketplace.
+2. Оновлення потребують перезапуску: Marketplace запропонує його в **Налаштування → Ремонти**.
 3. **Налаштування → Пристрої та служби → Додати інтеграцію → BYD Leopard 3.** Вкажи назву, модель і джерело даних (якщо не впевнений, лиши «Визначати автоматично»).
 4. Скопіюй адресу вебхука і встав її в застосунок. У BYDMate це Settings → Integrations → **Webhook: telemetry**: встав адресу, натисни *Save webhook* і увімкни *Live data → your own server*. Щоб мати локацію і маршрути поїздок, увімкни *Send coordinates to the webhook*. BYDMate надсилає дані лише на `https://`, тож Home Assistant має бути доступний через HTTPS.
 5. Щоб ніхто сторонній не міг слати дані на вебхук, задай **секрет вебхука** в параметрах інтеграції і той самий рядок у полі *Secret* у BYDMate.

@@ -4,6 +4,9 @@
   "after_dependencies": [
     "frontend"
   ],
+  "categories": [
+    "vehicles_transport.cars_evs"
+  ],
   "codeowners": [
     "@vasyl127"
   ],
