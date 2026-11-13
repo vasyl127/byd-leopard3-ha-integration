@@ -38,11 +38,12 @@ class Location(VehicleEntity, TrackerEntity):
         return 10
 
     @property
-    def battery_level(self) -> int | None:
-        soc = self.vehicle.values.get("soc")
-        return None if soc is None else int(soc)
-
-    @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        h = self.vehicle.values.get("heading")
-        return {"heading": h} if h is not None else {}
+        # battery_level as an attribute: the TrackerEntity property is deprecated (gone in 2027.7),
+        # but ABRP-style consumers still read it from the tracker.
+        attrs: dict[str, Any] = {}
+        if (h := self.vehicle.values.get("heading")) is not None:
+            attrs["heading"] = h
+        if (soc := self.vehicle.values.get("soc")) is not None:
+            attrs["battery_level"] = int(soc)
+        return attrs

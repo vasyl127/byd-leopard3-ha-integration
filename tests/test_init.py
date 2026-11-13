@@ -108,3 +108,23 @@ async def test_options_flow(hass: HomeAssistant):
     result = await hass.config_entries.options.async_configure(result["flow_id"], {
         "model": "seal", "source": "abrp", "offline_after": 300, "record_trips": True, "field_map": "{bad"})
     assert result["errors"] == {"field_map": "invalid_json"}
+
+
+async def test_tracker_battery_without_deprecated_property(hass: HomeAssistant, hass_client_no_auth):
+    """battery_level stays a tracker attribute, but not via the deprecated property."""
+    from custom_components.byd_leopard3.device_tracker import Location
+
+    assert "battery_level" not in Location.__dict__
+    entry = await _setup(hass)
+    client = await hass_client_no_auth()
+    resp = await client.post(f"/api/webhook/{entry.data['webhook_id']}",
+                             json={**BYDMATE, "lat": 50.45, "lon": 30.52, "heading": 90})
+    assert resp.status == 200
+    await hass.async_block_till_done()
+
+    reg = er.async_get(hass)
+    tracker = next(e.entity_id for e in er.async_entries_for_config_entry(reg, entry.entry_id)
+                   if e.domain == "device_tracker")
+    attrs = hass.states.get(tracker).attributes
+    assert attrs["battery_level"] == 20
+    assert attrs["heading"] == 90
